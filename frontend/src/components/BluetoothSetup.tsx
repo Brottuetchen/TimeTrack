@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
+  allowIncomingPair,
   connectBluetooth,
   disconnectBluetooth,
+  fetchIncomingPairingStatus,
   listBluetoothDevices,
   pairBluetooth,
   removeBluetooth,
@@ -21,6 +23,10 @@ export const BluetoothSetup = () => {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [incomingDuration, setIncomingDuration] = useState(60);
+  const [incomingStatus, setIncomingStatus] = useState<{ active: boolean; mac?: string; expires_at?: number }>({
+    active: false,
+  });
 
   const appendLog = (message: string) => {
     setLogs((prev) => [...prev.slice(-25), `${new Date().toLocaleTimeString()} ${message}`]);
@@ -51,8 +57,18 @@ export const BluetoothSetup = () => {
     }
   };
 
+  const loadIncomingStatus = async () => {
+    try {
+      const status = await fetchIncomingPairingStatus();
+      setIncomingStatus(status);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadDevices();
+    loadIncomingStatus();
   }, []);
 
   const handleScan = async () => {
@@ -117,6 +133,23 @@ export const BluetoothSetup = () => {
       logCommandResult(result);
     } catch (err: any) {
       const detail = err?.response?.data?.detail || "PBAP Sync fehlgeschlagen";
+      toast.error(detail);
+      appendLog(detail);
+    }
+  };
+
+  const handleIncomingPairing = async () => {
+    const macAddress = resolveMac();
+    if (!macAddress) return;
+    try {
+      const result = await allowIncomingPair(macAddress, incomingDuration);
+      const expires = result?.expires_at ? new Date(result.expires_at * 1000) : null;
+      const message = `Auto-Accept aktiviert fuer ${macAddress} (${incomingDuration}s)`;
+      toast.success(message);
+      appendLog(expires ? `${message} -> bis ${expires.toLocaleTimeString()}` : message);
+      await loadIncomingStatus();
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || "Pairing-Freigabe fehlgeschlagen";
       toast.error(detail);
       appendLog(detail);
     }
@@ -223,6 +256,43 @@ export const BluetoothSetup = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="rounded border border-slate-200 dark:border-slate-700 p-4 space-y-2">
+        <p className="text-sm text-slate-700 dark:text-slate-200 font-semibold">iPhone-Pairing Freigabe</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Aktiviert den Pi fuer eingehende Pairing-Anfragen fuer ein bestimmtes Geraet. Nach Ablauf wird die Freigabe
+          automatisch deaktiviert.
+        </p>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end">
+          <div>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Dauer (Sekunden)</label>
+            <input
+              type="number"
+              min={5}
+              max={300}
+              value={incomingDuration}
+              onChange={(e) => setIncomingDuration(Number(e.target.value))}
+              className="mt-1 w-32 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleIncomingPairing}
+            className="rounded bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-500"
+          >
+            Freigabe starten
+          </button>
+          <div className="text-xs text-slate-600 dark:text-slate-300">
+            {incomingStatus.active && incomingStatus.expires_at ? (
+              <span>
+                Aktiv fuer {incomingStatus.mac} bis{" "}
+                {new Date(incomingStatus.expires_at * 1000).toLocaleTimeString()}
+              </span>
+            ) : (
+              <span>Keine aktive Freigabe</span>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

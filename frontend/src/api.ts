@@ -118,6 +118,16 @@ export async function triggerPbap(mac: string) {
   return data;
 }
 
+export async function allowIncomingPair(mac: string, duration = 60) {
+  const { data } = await client.post("/bluetooth/incoming", { mac, duration });
+  return data as { expires_at: number; mac: string; duration: number };
+}
+
+export async function fetchIncomingPairingStatus() {
+  const { data } = await client.get("/bluetooth/incoming/status");
+  return data as { active: boolean; mac?: string; expires_at?: number };
+}
+
 export async function createAssignment(payload: AssignmentPayload) {
   const { data } = await client.post("/assignments", payload);
   return data;

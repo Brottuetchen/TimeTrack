@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
+from .bluetooth_agent import start_agent
 from .routers import assignments, bluetooth, events, export, imports, milestones, projects, settings
 
 init_db()
+start_agent()
 
 app = FastAPI(title="TimeTrack MVP", version="0.1.0")
 
