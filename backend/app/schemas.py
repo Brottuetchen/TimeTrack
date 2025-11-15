@@ -34,6 +34,22 @@ class EventUpdate(BaseModel):
     is_private: Optional[bool] = None
 
 
+class BulkEventUpdate(BaseModel):
+    """Schema for bulk event operations."""
+    event_ids: List[int] = Field(..., description="List of event IDs to update")
+    is_private: Optional[bool] = Field(None, description="Set privacy flag (True/False)")
+    delete: bool = Field(False, description="Delete events")
+    unassign: bool = Field(False, description="Remove assignments from events")
+
+
+class BulkEventResponse(BaseModel):
+    """Response schema for bulk event operations."""
+    updated_count: int = Field(..., description="Number of events updated")
+    deleted_count: int = Field(0, description="Number of events deleted")
+    unassigned_count: int = Field(0, description="Number of assignments removed")
+    event_ids: List[int] = Field(..., description="List of affected event IDs")
+
+
 class EventRead(BaseModel):
     id: int
     source_type: SourceType

@@ -166,6 +166,52 @@ export async function updateEventPrivacy(eventId: number, isPrivate: boolean) {
   return data as Event;
 }
 
+export interface BulkUpdateOptions {
+  is_private?: boolean;
+  delete?: boolean;
+  unassign?: boolean;
+}
+
+export interface BulkUpdateResponse {
+  updated_count: number;
+  deleted_count: number;
+  unassigned_count: number;
+  event_ids: number[];
+}
+
+export async function bulkUpdateEvents(
+  eventIds: number[],
+  options: BulkUpdateOptions
+): Promise<BulkUpdateResponse> {
+  const payload = {
+    event_ids: eventIds,
+    is_private: options.is_private,
+    delete: options.delete || false,
+    unassign: options.unassign || false,
+  };
+  const { data } = await client.patch<BulkUpdateResponse>("/events/bulk", payload);
+  return data;
+}
+
+export async function fetchUnassignedEvents(userId?: string, limit = 20): Promise<Event[]> {
+  const params = new URLSearchParams();
+  if (userId) params.set("user_id", userId);
+  params.set("limit", limit.toString());
+  const { data } = await client.get<Event[]>("/events/unassigned", { params });
+  return data;
+}
+
+export async function createBulkAssignments(
+  eventIds: number[],
+  payload: Omit<AssignmentPayload, "event_id">
+) {
+  const { data } = await client.post("/assignments/bulk", {
+    event_ids: eventIds,
+    ...payload,
+  });
+  return data;
+}
+
 export async function uploadProjectCsv(file: File) {
   const formData = new FormData();
   formData.append("file", file);
