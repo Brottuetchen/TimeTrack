@@ -150,12 +150,12 @@ class MainWindow(QMainWindow):
 
         # Quick-Assign Button
         quick_assign_btn = QPushButton("Quick-Assign")
-        quick_assign_btn.clicked.connect(self.quick_assign_requested.emit)
+        quick_assign_btn.clicked.connect(lambda: self.quick_assign_requested.emit())
         layout.addWidget(quick_assign_btn)
 
         # Settings Button
         settings_btn = QPushButton("Einstellungen")
-        settings_btn.clicked.connect(self.settings_requested.emit)
+        settings_btn.clicked.connect(lambda: self.settings_requested.emit())
         layout.addWidget(settings_btn)
 
         return header

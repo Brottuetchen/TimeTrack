@@ -89,12 +89,12 @@ class TrayController(QObject):
 
         # Dashboard
         dashboard_action = QAction("Dashboard öffnen", self)
-        dashboard_action.triggered.connect(self.dashboard_requested.emit)
+        dashboard_action.triggered.connect(lambda: self.dashboard_requested.emit())
         menu.addAction(dashboard_action)
 
         # Quick-Assign
         quick_assign_action = QAction("Quick-Assign", self)
-        quick_assign_action.triggered.connect(self.quick_assign_requested.emit)
+        quick_assign_action.triggered.connect(lambda: self.quick_assign_requested.emit())
         menu.addAction(quick_assign_action)
 
         menu.addSeparator()
@@ -108,7 +108,7 @@ class TrayController(QObject):
 
         # Send Now
         send_action = QAction("Events jetzt senden", self)
-        send_action.triggered.connect(self.send_now_requested.emit)
+        send_action.triggered.connect(lambda: self.send_now_requested.emit())
         menu.addAction(send_action)
 
         menu.addSeparator()
@@ -116,13 +116,13 @@ class TrayController(QObject):
         # Call-Sync (nur wenn aktiviert)
         if self.call_sync_enabled:
             call_sync_action = QAction("Call-Sync jetzt", self)
-            call_sync_action.triggered.connect(self.call_sync_requested.emit)
+            call_sync_action.triggered.connect(lambda: self.call_sync_requested.emit())
             menu.addAction(call_sync_action)
             menu.addSeparator()
 
         # Settings
         settings_action = QAction("Einstellungen", self)
-        settings_action.triggered.connect(self.settings_requested.emit)
+        settings_action.triggered.connect(lambda: self.settings_requested.emit())
         menu.addAction(settings_action)
 
         # Status
@@ -134,7 +134,7 @@ class TrayController(QObject):
 
         # Beenden
         quit_action = QAction("Beenden", self)
-        quit_action.triggered.connect(self.quit_requested.emit)
+        quit_action.triggered.connect(lambda: self.quit_requested.emit())
         menu.addAction(quit_action)
 
         self.tray_icon.setContextMenu(menu)
