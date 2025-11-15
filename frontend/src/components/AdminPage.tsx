@@ -3,12 +3,13 @@ import { BluetoothSetup } from "./BluetoothSetup";
 import { PrivacyControls } from "./PrivacyControls";
 import { CallSyncSettings } from "./CallSyncSettings";
 import { MasterdataImport } from "./MasterdataImport";
+import { LogoSettings } from "./LogoSettings";
 
 interface Props {
   onMasterdataUpload: (file: File) => Promise<void>;
 }
 
-type Tab = "privacy" | "bluetooth" | "callsync" | "import";
+type Tab = "privacy" | "bluetooth" | "callsync" | "import" | "logo";
 
 export function AdminPage({ onMasterdataUpload }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("privacy");
@@ -18,6 +19,7 @@ export function AdminPage({ onMasterdataUpload }: Props) {
     { id: "bluetooth" as Tab, label: "Bluetooth", icon: "📱" },
     { id: "callsync" as Tab, label: "Call-Sync", icon: "📞" },
     { id: "import" as Tab, label: "Daten-Import", icon: "📥" },
+    { id: "logo" as Tab, label: "Logo", icon: "🎨" },
   ];
 
   return (
@@ -59,6 +61,7 @@ export function AdminPage({ onMasterdataUpload }: Props) {
         {activeTab === "bluetooth" && <BluetoothSetup />}
         {activeTab === "callsync" && <CallSyncSettings />}
         {activeTab === "import" && <MasterdataImport onUpload={onMasterdataUpload} />}
+        {activeTab === "logo" && <LogoSettings />}
       </div>
     </section>
   );

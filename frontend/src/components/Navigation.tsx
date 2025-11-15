@@ -50,7 +50,7 @@ export function Navigation({ currentPage, onPageChange, theme, onThemeToggle }: 
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
 
           {/* Menu Card */}
-          <div className="absolute top-12 left-0 z-50 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
+          <div className="absolute top-12 right-0 z-50 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
             {/* Header */}
             <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
               <h3 className="font-semibold text-slate-900 dark:text-white">Navigation</h3>

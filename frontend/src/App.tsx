@@ -39,6 +39,7 @@ function App() {
     if (typeof window === "undefined") return "light";
     return (localStorage.getItem("tt-theme") as "light" | "dark") || "light";
   });
+  const [logo, setLogo] = useState<string | null>(null);
 
   const assignmentMap = useMemo(() => {
     const map: Record<number, Assignment> = {};
@@ -74,6 +75,14 @@ function App() {
 
   useEffect(() => {
     loadStatic();
+    loadLogo();
+
+    // Listen for logo updates
+    const handleLogoUpdate = (e: any) => {
+      setLogo(e.detail.logo);
+    };
+    window.addEventListener("logo-updated", handleLogoUpdate);
+    return () => window.removeEventListener("logo-updated", handleLogoUpdate);
   }, []);
 
   const loadStatic = async () => {
@@ -84,6 +93,18 @@ function App() {
     } catch (err) {
       console.error(err);
       toast.error("Konnte Stammdaten nicht laden");
+    }
+  };
+
+  const loadLogo = async () => {
+    try {
+      const response = await fetch("/api/settings/logo");
+      if (response.ok) {
+        const data = await response.json();
+        setLogo(data.logo_svg || null);
+      }
+    } catch (err) {
+      console.error("Fehler beim Laden des Logos:", err);
     }
   };
 
@@ -257,9 +278,17 @@ function App() {
           theme={theme}
           onThemeToggle={toggleTheme}
         />
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{getPageTitle()}</h1>
-          {getPageSubtitle() && <p className="text-sm text-slate-600 dark:text-slate-300">{getPageSubtitle()}</p>}
+        <div className="flex-1 flex items-center gap-3">
+          {logo && (
+            <div
+              className="max-h-12 max-w-[120px] flex-shrink-0"
+              dangerouslySetInnerHTML={{ __html: logo }}
+            />
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{getPageTitle()}</h1>
+            {getPageSubtitle() && <p className="text-sm text-slate-600 dark:text-slate-300">{getPageSubtitle()}</p>}
+          </div>
         </div>
         {currentPage === "home" && (
           <div className="flex gap-2 items-center">

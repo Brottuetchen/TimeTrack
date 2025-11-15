@@ -90,3 +90,44 @@ def clear_privacy():
     settings["privacy_mode_until"] = None
     save_settings(settings)
     return get_logging_settings()
+
+
+@router.get("/logo")
+def get_logo():
+    """
+    Gibt das hochgeladene SVG-Logo zurück.
+    """
+    settings = load_settings()
+    return {"logo_svg": settings.get("logo_svg", None)}
+
+
+@router.put("/logo")
+def upload_logo(payload: dict):
+    """
+    Speichert ein SVG-Logo.
+    """
+    settings = load_settings()
+    logo_svg = payload.get("logo_svg", "")
+
+    # Validierung: Maximal 500 KB
+    if len(logo_svg) > 500 * 1024:
+        raise HTTPException(status_code=400, detail="Logo zu groß (max. 500 KB)")
+
+    # Einfache SVG-Validierung
+    if logo_svg and not logo_svg.strip().startswith("<svg"):
+        raise HTTPException(status_code=400, detail="Ungültiges SVG-Format")
+
+    settings["logo_svg"] = logo_svg
+    save_settings(settings)
+    return {"logo_svg": logo_svg}
+
+
+@router.delete("/logo")
+def delete_logo():
+    """
+    Entfernt das hochgeladene Logo.
+    """
+    settings = load_settings()
+    settings["logo_svg"] = None
+    save_settings(settings)
+    return {"logo_svg": None}
