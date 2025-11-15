@@ -118,7 +118,7 @@ function App() {
   const loadEvents = async (showToast = false) => {
     setLoading(true);
     try {
-      const [evts, assigns] = await Promise.all([fetchEvents(filters), fetchAssignments()]);
+      const [evts, assigns] = await Promise.all([fetchEvents(filters), fetchAssignments(filters)]);
       setEvents(evts);
       setAssignments(assigns);
       setSelected(new Set());

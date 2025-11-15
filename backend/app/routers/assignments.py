@@ -1,6 +1,7 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from .. import schemas
@@ -11,12 +12,27 @@ router = APIRouter(prefix="/assignments", tags=["assignments"])
 
 
 @router.get("", response_model=List[schemas.AssignmentRead])
-def list_assignments(db: Session = Depends(get_db)):
-    assignments = (
-        db.query(Assignment)
-        .options(joinedload(Assignment.event), joinedload(Assignment.project), joinedload(Assignment.milestone))
-        .all()
+def list_assignments(
+    start: Optional[str] = Query(None),
+    end: Optional[str] = Query(None),
+    limit: int = Query(1000, le=1000),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Assignment).options(
+        joinedload(Assignment.event), joinedload(Assignment.project), joinedload(Assignment.milestone)
     )
+
+    # Filter nach Event-Zeitstempel
+    if start:
+        start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        query = query.join(Assignment.event).filter(Event.timestamp >= start_dt)
+    if end:
+        end_dt = datetime.fromisoformat(end.replace("Z", "+00:00"))
+        if not start:  # Join nur wenn nicht schon durch start passiert
+            query = query.join(Assignment.event)
+        query = query.filter(Event.timestamp < end_dt)
+
+    assignments = query.order_by(Assignment.id.desc()).limit(limit).all()
     return assignments
 
 

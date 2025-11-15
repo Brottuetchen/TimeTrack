@@ -50,8 +50,12 @@ export async function fetchMilestones(project_id?: number): Promise<Milestone[]>
   return data;
 }
 
-export async function fetchAssignments(): Promise<Assignment[]> {
-  const { data } = await client.get<Assignment[]>("/assignments");
+export async function fetchAssignments(filters?: Filters): Promise<Assignment[]> {
+  const params = new URLSearchParams();
+  if (filters?.start) params.set("start", filters.start);
+  if (filters?.end) params.set("end", filters.end);
+  params.set("limit", "500");
+  const { data } = await client.get<Assignment[]>("/assignments", { params });
   return data;
 }
 
