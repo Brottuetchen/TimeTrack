@@ -11,6 +11,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
@@ -19,11 +20,16 @@ import requests
 from gi.repository import GLib
 from pydbus import SystemBus
 
+from pbap_sync import PBAPSync
+
 API_BASE_URL = os.getenv("TIMETRACK_API", "http://127.0.0.1:8000")
 DEVICE_ID = os.getenv("TIMETRACK_DEVICE_ID", "raspi-pi5")
 USER_ID = os.getenv("TIMETRACK_USER_ID", "default")
 CONTACTS_FILE = os.getenv("TIMETRACK_CONTACTS", "/opt/timetrack/contacts.json")
 LOG_LEVEL = os.getenv("TIMETRACK_LOG_LEVEL", "INFO").upper()
+PBAP_DEVICE = os.getenv("TIMETRACK_PBAP_DEVICE")
+PBAP_INTERVAL = int(os.getenv("TIMETRACK_PBAP_INTERVAL", "900"))
+PBAP_STATE = Path(os.getenv("TIMETRACK_PBAP_STATE", "/var/lib/timetrack/pbap_state.json"))
 
 
 class CallLogger:
@@ -38,6 +44,22 @@ class CallLogger:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
         self.logger.addHandler(handler)
+        self.pbap_thread: Optional[threading.Thread] = None
+        if PBAP_DEVICE:
+            self.logger.info("PBAP sync aktiviert für %s", PBAP_DEVICE)
+            self.pbap_sync = PBAPSync(
+                device_mac=PBAP_DEVICE,
+                api_base=API_BASE_URL,
+                session=self.session,
+                device_id=DEVICE_ID,
+                user_id=USER_ID,
+                state_path=PBAP_STATE,
+                interval_seconds=PBAP_INTERVAL,
+                logger=self.logger,
+            )
+            self.pbap_thread = threading.Thread(target=self.pbap_sync.run, daemon=True)
+        else:
+            self.pbap_sync = None
 
     def _load_contacts(self, path: str) -> Dict[str, str]:
         file_path = Path(path)
@@ -56,6 +78,8 @@ class CallLogger:
             self.logger.info("Watching modem %s (%s)", modem_path, props.get("Name"))
             self._watch_modem(modem_path)
         manager.onModemAdded = self._watch_modem  # dynamic plug
+        if self.pbap_thread:
+            self.pbap_thread.start()
         self.loop.run()
 
     def _watch_modem(self, modem_path, *_):
