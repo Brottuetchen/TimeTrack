@@ -1,0 +1,17 @@
+[Unit]
+Description=TimeTrack Bluetooth Call Logger
+After=bluetooth.target ofono.service docker.service
+Requires=bluetooth.service ofono.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/TimeTrack/pi_services/call_logger
+Environment=TIMETRACK_API=http://127.0.0.1:8000
+Environment=TIMETRACK_DEVICE_ID=raspi-pi5
+Environment=TIMETRACK_USER_ID=default
+ExecStart=/home/pi/TimeTrack/pi_services/call_logger/.venv/bin/python3 call_logger.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

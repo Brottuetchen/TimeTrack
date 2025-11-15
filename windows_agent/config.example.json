@@ -1,0 +1,15 @@
+{
+  "base_url": "http://localhost:8000",
+  "machine_id": "pc-lars",
+  "user_id": "lars",
+  "poll_interval_ms": 1500,
+  "send_batch_seconds": 30,
+  "include_processes": ["acad.exe", "winword.exe", "excel.exe", "powerpnt.exe"],
+  "exclude_processes": ["chrome.exe", "msedge.exe", "outlook.exe"],
+  "include_title_keywords": [],
+  "exclude_title_keywords": ["Privat", "WhatsApp"],
+  "buffer_file": "%APPDATA%/TimeTrack/buffer.json",
+  "log_file": "%APPDATA%/TimeTrack/timetrack_agent.log",
+  "verify_ssl": false,
+  "api_key": null
+}

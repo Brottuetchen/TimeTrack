@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ./backend
+    container_name: timetrack-api
+    restart: unless-stopped
+    environment:
+      TIMETRACK_DB_PATH: /data/timetrack.db
+    volumes:
+      - timetrack-data:/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build:
+      context: ./frontend
+    container_name: timetrack-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      - API_BASE=http://api:8000
+    ports:
+      - "3000:80"
+
+volumes:
+  timetrack-data:
+    driver: local
