@@ -11,6 +11,10 @@ services:
     volumes:
       - timetrack-data:/data
       - /var/run/dbus:/var/run/dbus
+      - /var/run/bluetooth:/var/run/bluetooth
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     ports:
       - "8000:8000"
     healthcheck:

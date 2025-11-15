@@ -1,3 +1,4 @@
+import re
 import subprocess
 import tempfile
 import textwrap
@@ -5,8 +6,17 @@ from pathlib import Path
 from typing import List, Tuple
 
 
+ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+
 class BluetoothError(Exception):
     pass
+
+
+def _strip_ansi(text: str | None) -> str:
+    if not text:
+        return ""
+    return ANSI_ESCAPE.sub("", text)
 
 
 def _raise_on_error(code: int, stdout: str, stderr: str, fallback: str) -> None:
@@ -30,7 +40,9 @@ def _run(command: List[str], input_data: str | None = None, timeout: int = 30) -
         raise BluetoothError(f"Befehl nicht gefunden: {command[0]}") from exc
     except subprocess.TimeoutExpired as exc:
         raise BluetoothError(f"Befehl zeitueberschreitung: {' '.join(command)}") from exc
-    return result.returncode, result.stdout, result.stderr
+    stdout = _strip_ansi(result.stdout)
+    stderr = _strip_ansi(result.stderr)
+    return result.returncode, stdout, stderr
 
 
 def run_bluetoothctl_script(commands: List[str], timeout: int = 30) -> Tuple[int, str, str]:
