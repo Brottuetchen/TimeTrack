@@ -4,10 +4,7 @@ import dayjs from "dayjs";
 import { FiltersBar } from "./components/FiltersBar";
 import { EventsTable } from "./components/EventsTable";
 import { BulkAssignBar } from "./components/BulkAssignBar";
-import { MasterdataImport } from "./components/MasterdataImport";
-import { BluetoothSetup } from "./components/BluetoothSetup";
-import { PrivacyControls } from "./components/PrivacyControls";
-import { CallSyncSettings } from "./components/CallSyncSettings";
+import { AdminPage } from "./components/AdminPage";
 import {
   createAssignment,
   defaultRange,
@@ -258,7 +255,6 @@ function App() {
         </div>
       </header>
       <FiltersBar filters={filters} onChange={setFilters} onRefresh={loadEvents} />
-      <MasterdataImport onUpload={handleMasterdataUpload} />
       {selected.size > 0 && (
         <BulkAssignBar
           selectedCount={selected.size}
@@ -290,9 +286,7 @@ function App() {
           />
         )}
       </section>
-      <PrivacyControls />
-      <BluetoothSetup />
-      <CallSyncSettings />
+      <AdminPage onMasterdataUpload={handleMasterdataUpload} />
     </div>
   );
 }

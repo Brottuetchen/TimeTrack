@@ -123,8 +123,10 @@ export function CallSyncSettings() {
   };
 
   return (
-    <section className="p-6 rounded-lg bg-white dark:bg-slate-800 shadow space-y-6">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Call-Sync Einstellungen</h2>
+    <div className="space-y-6">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        Konfiguration für Microsoft Teams und Placetel Call-Synchronisation.
+      </p>
 
       <div className="space-y-6">
         {/* Microsoft Teams */}
@@ -295,6 +297,6 @@ export function CallSyncSettings() {
           </ul>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

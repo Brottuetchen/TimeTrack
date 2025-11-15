@@ -156,13 +156,10 @@ export const BluetoothSetup = () => {
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 space-y-4">
-      <header>
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Bluetooth-Steuerung</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Geraete scannen, pairen, verbinden und PBAP-Sync direkt im Browser.
-        </p>
-      </header>
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Geräte scannen, pairen, verbinden und PBAP-Sync direkt im Browser.
+      </p>
 
       <div className="flex flex-col gap-2 md:flex-row md:items-end">
         <div className="flex-1">
@@ -331,6 +328,6 @@ export const BluetoothSetup = () => {
       <div className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 max-h-48 overflow-auto text-xs font-mono text-slate-600 dark:text-slate-300">
         {logs.length === 0 ? <p>Noch keine Aktionen.</p> : logs.map((entry, idx) => <div key={idx}>{entry}</div>)}
       </div>
-    </section>
+    </div>
   );
 };

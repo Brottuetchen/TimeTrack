@@ -89,21 +89,14 @@ export const PrivacyControls = () => {
   };
 
   if (!settings) {
-    return (
-      <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
-        <p className="text-sm text-slate-500">Lade Logging-Settings…</p>
-      </section>
-    );
+    return <p className="text-sm text-slate-500">Lade Logging-Settings…</p>;
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 space-y-4">
-      <header>
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Privacy &amp; Filter</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Whitelist/Blacklist für Prozesse sowie Privacy-Modus (Logging pausieren).
-        </p>
-      </header>
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Whitelist/Blacklist für Prozesse sowie Privacy-Modus (Logging pausieren).
+      </p>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col">
           <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">Whitelist (ein Prozess pro Zeile)</label>
@@ -151,6 +144,6 @@ export const PrivacyControls = () => {
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
