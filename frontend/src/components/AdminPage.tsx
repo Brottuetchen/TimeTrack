@@ -4,13 +4,14 @@ import { PrivacyControls } from "./PrivacyControls";
 import { CallSyncSettings } from "./CallSyncSettings";
 import { MasterdataImport } from "./MasterdataImport";
 import { MasterdataManagement } from "./MasterdataManagement";
+import { PhonebookManagement } from "./PhonebookManagement";
 import { LogoSettings } from "./LogoSettings";
 
 interface Props {
   onMasterdataUpload: (file: File) => Promise<void>;
 }
 
-type Tab = "privacy" | "bluetooth" | "callsync" | "masterdata" | "import" | "logo";
+type Tab = "privacy" | "bluetooth" | "callsync" | "masterdata" | "phonebook" | "import" | "logo";
 
 export function AdminPage({ onMasterdataUpload }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("privacy");
@@ -20,6 +21,7 @@ export function AdminPage({ onMasterdataUpload }: Props) {
     { id: "bluetooth" as Tab, label: "Bluetooth", icon: "📱" },
     { id: "callsync" as Tab, label: "Call-Sync", icon: "📞" },
     { id: "masterdata" as Tab, label: "Stammdaten", icon: "📊" },
+    { id: "phonebook" as Tab, label: "Telefonbuch", icon: "📞" },
     { id: "import" as Tab, label: "Daten-Import", icon: "📥" },
     { id: "logo" as Tab, label: "Logo", icon: "🎨" },
   ];
@@ -63,6 +65,7 @@ export function AdminPage({ onMasterdataUpload }: Props) {
         {activeTab === "bluetooth" && <BluetoothSetup />}
         {activeTab === "callsync" && <CallSyncSettings />}
         {activeTab === "masterdata" && <MasterdataManagement />}
+        {activeTab === "phonebook" && <PhonebookManagement />}
         {activeTab === "import" && <MasterdataImport onUpload={onMasterdataUpload} />}
         {activeTab === "logo" && <LogoSettings />}
       </div>

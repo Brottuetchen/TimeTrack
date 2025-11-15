@@ -113,3 +113,20 @@ class CallLog(Base):
     raw_payload = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PhoneBook(Base):
+    """
+    Phone book entries for automatic caller name resolution.
+    Stores contact information with tags for categorization.
+    """
+    __tablename__ = "phonebook"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(256), nullable=False, index=True)
+    number = Column(String(32), nullable=False, index=True)
+    company = Column(String(256), nullable=True)
+    tags = Column(JSON, nullable=True)  # List of tags: ["kunde", "wichtig", etc.]
+    user_id = Column(String(64), nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

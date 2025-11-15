@@ -163,3 +163,37 @@ class CallLogRead(CallLogBase):
 
     class Config:
         orm_mode = True
+
+
+
+class PhoneBookBase(BaseModel):
+    """Base schema for PhoneBook entries."""
+    name: str
+    number: str
+    company: Optional[str] = None
+    tags: Optional[List[str]] = None
+    user_id: Optional[str] = None
+
+
+class PhoneBookCreate(PhoneBookBase):
+    """Schema for creating a new PhoneBook entry."""
+    pass
+
+
+class PhoneBookUpdate(BaseModel):
+    """Schema for updating a PhoneBook entry."""
+    name: Optional[str] = None
+    number: Optional[str] = None
+    company: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+class PhoneBookRead(PhoneBookBase):
+    """Schema for reading PhoneBook entries with ID and timestamps."""
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
