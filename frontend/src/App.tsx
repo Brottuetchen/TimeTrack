@@ -85,6 +85,13 @@ function App() {
     return () => window.removeEventListener("logo-updated", handleLogoUpdate);
   }, []);
 
+  // Events nur laden, wenn wir auf der Home-Page sind
+  useEffect(() => {
+    if (currentPage === "home") {
+      loadEvents();
+    }
+  }, [currentPage]);
+
   const loadStatic = async () => {
     try {
       const [proj, miles] = await Promise.all([fetchProjects(), fetchMilestones()]);
@@ -108,14 +115,16 @@ function App() {
     }
   };
 
-  const loadEvents = async () => {
+  const loadEvents = async (showToast = false) => {
     setLoading(true);
     try {
       const [evts, assigns] = await Promise.all([fetchEvents(filters), fetchAssignments()]);
       setEvents(evts);
       setAssignments(assigns);
       setSelected(new Set());
-      toast.success(`Events aktualisiert (${evts.length})`);
+      if (showToast) {
+        toast.success(`Events aktualisiert (${evts.length})`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Fehler beim Laden");
@@ -123,10 +132,6 @@ function App() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadEvents();
-  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -293,7 +298,7 @@ function App() {
               CSV Export
             </button>
             <button
-              onClick={loadEvents}
+              onClick={() => loadEvents(true)}
               className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400"
             >
               Neu laden
@@ -311,7 +316,7 @@ function App() {
       {/* Page Content */}
       {currentPage === "home" && (
         <>
-          <FiltersBar filters={filters} onChange={setFilters} onRefresh={loadEvents} />
+          <FiltersBar filters={filters} onChange={setFilters} onRefresh={() => loadEvents(true)} />
           {selected.size > 0 && (
             <BulkAssignBar
               selectedCount={selected.size}

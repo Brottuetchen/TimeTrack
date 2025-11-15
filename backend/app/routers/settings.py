@@ -114,8 +114,10 @@ def upload_logo(payload: dict):
         raise HTTPException(status_code=400, detail="Logo zu groß (max. 500 KB)")
 
     # Einfache SVG-Validierung
-    if logo_svg and not logo_svg.strip().startswith("<svg"):
-        raise HTTPException(status_code=400, detail="Ungültiges SVG-Format")
+    if logo_svg:
+        stripped = logo_svg.strip()
+        if not (stripped.startswith("<svg") or stripped.startswith("<?xml")):
+            raise HTTPException(status_code=400, detail="Ungültiges SVG-Format")
 
     settings["logo_svg"] = logo_svg
     save_settings(settings)
