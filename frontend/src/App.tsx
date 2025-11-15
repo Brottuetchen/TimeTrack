@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import dayjs from "dayjs";
+import { Navigation } from "./components/Navigation";
 import { FiltersBar } from "./components/FiltersBar";
 import { EventsTable } from "./components/EventsTable";
 import { BulkAssignBar } from "./components/BulkAssignBar";
 import { AdminPage } from "./components/AdminPage";
+import { PrivacyPage } from "./components/PrivacyPage";
 import {
   createAssignment,
   defaultRange,
@@ -21,7 +23,10 @@ import { Assignment, BulkForm, Event, Filters, Milestone, Project } from "./type
 
 const ACTIVITY_OPTIONS = ["Planung", "Baustelle", "Dokumentation", "Meeting", "Fahrt", "Telefon", "PC"];
 
+type Page = "home" | "admin" | "privacy";
+
 function App() {
+  const [currentPage, setCurrentPage] = useState<Page>("home");
   const [filters, setFilters] = useState<Filters>(defaultRange());
   const [events, setEvents] = useState<Event[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -222,71 +227,99 @@ function App() {
 
   const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
+  const getPageTitle = () => {
+    switch (currentPage) {
+      case "home":
+        return "TimeTrack Review";
+      case "admin":
+        return "Administration";
+      case "privacy":
+        return "Privacy Einstellungen";
+    }
+  };
+
+  const getPageSubtitle = () => {
+    if (currentPage === "home") {
+      return `${dayjs(filters.start).format("DD.MM")} – ${dayjs(filters.end).format("DD.MM.YYYY")}`;
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen px-6 py-6 space-y-6 bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors">
       <Toaster position="bottom-right" />
+
+      {/* Header mit Navigation */}
       <header className="flex flex-wrap items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">TimeTrack Review</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            {dayjs(filters.start).format("DD.MM")} – {dayjs(filters.end).format("DD.MM.YYYY")}
-          </p>
-        </div>
-        <div className="ml-auto flex gap-2 items-center">
-          <button
-            onClick={toggleTheme}
-            className="px-3 py-2 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700"
-            title="Dark Mode umschalten"
-          >
-            {theme === "dark" ? "🌙" : "☀️"}
-          </button>
-          <button
-            onClick={() => exportCsv(filters)}
-            className="px-4 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
-          >
-            CSV Export
-          </button>
-          <button
-            onClick={loadEvents}
-            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400"
-          >
-            Neu laden
-          </button>
-        </div>
-      </header>
-      <FiltersBar filters={filters} onChange={setFilters} onRefresh={loadEvents} />
-      {selected.size > 0 && (
-        <BulkAssignBar
-          selectedCount={selected.size}
-          bulkForm={bulkForm}
-          projects={projects}
-          milestones={milestones}
-          activityOptions={ACTIVITY_OPTIONS}
-          onChange={setBulkForm}
-          onApply={applyBulk}
-          onClear={() => setSelected(new Set())}
+        <Navigation
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          theme={theme}
+          onThemeToggle={toggleTheme}
         />
-      )}
-      <section>
-        {loading ? (
-          <div className="p-6 text-center text-slate-500">Lädt…</div>
-        ) : (
-          <EventsTable
-            events={events}
-            assignments={assignmentMap}
-            projects={projects}
-            milestones={milestones}
-            selectedIds={selected}
-            onSelect={toggleSelect}
-            onAssign={handleAssign}
-            activityOptions={ACTIVITY_OPTIONS}
-            getDefaultActivity={defaultActivity}
-            getDefaultComment={defaultComment}
-            onPrivacyChange={handlePrivacyChange}
-          />
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{getPageTitle()}</h1>
+          {getPageSubtitle() && <p className="text-sm text-slate-600 dark:text-slate-300">{getPageSubtitle()}</p>}
+        </div>
+        {currentPage === "home" && (
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => exportCsv(filters)}
+              className="px-4 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"
+            >
+              CSV Export
+            </button>
+            <button
+              onClick={loadEvents}
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400"
+            >
+              Neu laden
+            </button>
+          </div>
         )}
-      </section>
-      <AdminPage onMasterdataUpload={handleMasterdataUpload} />
+      </header>
+
+      {/* Page Content */}
+      {currentPage === "home" && (
+        <>
+          <FiltersBar filters={filters} onChange={setFilters} onRefresh={loadEvents} />
+          {selected.size > 0 && (
+            <BulkAssignBar
+              selectedCount={selected.size}
+              bulkForm={bulkForm}
+              projects={projects}
+              milestones={milestones}
+              activityOptions={ACTIVITY_OPTIONS}
+              onChange={setBulkForm}
+              onApply={applyBulk}
+              onClear={() => setSelected(new Set())}
+            />
+          )}
+          <section>
+            {loading ? (
+              <div className="p-6 text-center text-slate-500">Lädt…</div>
+            ) : (
+              <EventsTable
+                events={events}
+                assignments={assignmentMap}
+                projects={projects}
+                milestones={milestones}
+                selectedIds={selected}
+                onSelect={toggleSelect}
+                onAssign={handleAssign}
+                activityOptions={ACTIVITY_OPTIONS}
+                getDefaultActivity={defaultActivity}
+                getDefaultComment={defaultComment}
+                onPrivacyChange={handlePrivacyChange}
+              />
+            )}
+          </section>
+        </>
+      )}
+
+      {currentPage === "admin" && <AdminPage onMasterdataUpload={handleMasterdataUpload} />}
+
+      {currentPage === "privacy" && <PrivacyPage />}
     </div>
   );
 }
