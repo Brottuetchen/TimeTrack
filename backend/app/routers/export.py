@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..models import Assignment, Event, SourceType
+from ..models import Assignment, Event, SourceType, Project, Milestone
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -83,6 +83,78 @@ def export_csv(
     buffer.seek(0)
 
     filename = f"export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/projects/csv")
+def export_projects_csv(db: Session = Depends(get_db)):
+    """
+    Export aller Projekte als CSV.
+    Format: name, kunde, notizen
+    """
+    projects = db.query(Project).order_by(Project.name).all()
+
+    rows = []
+    for project in projects:
+        rows.append({
+            "name": project.name,
+            "kunde": project.kunde or "",
+            "notizen": project.notizen or "",
+        })
+
+    buffer = StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=["name", "kunde", "notizen"])
+    writer.writeheader()
+    writer.writerows(rows)
+    buffer.seek(0)
+
+    filename = f"projects_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/milestones/csv")
+def export_milestones_csv(project_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    """
+    Export aller Milestones als CSV.
+    Optional: Nur für ein bestimmtes Projekt.
+    Format: project_name, name, soll_stunden, ist_stunden, bonus_relevant
+    """
+    query = db.query(Milestone).join(Project).options(joinedload(Milestone.project))
+
+    if project_id is not None:
+        query = query.filter(Milestone.project_id == project_id)
+
+    milestones = query.order_by(Project.name, Milestone.name).all()
+
+    rows = []
+    for milestone in milestones:
+        rows.append({
+            "project_name": milestone.project.name if milestone.project else "",
+            "name": milestone.name,
+            "soll_stunden": milestone.soll_stunden or 0,
+            "ist_stunden": milestone.ist_stunden or 0,
+            "bonus_relevant": "ja" if milestone.bonus_relevant else "nein",
+        })
+
+    buffer = StringIO()
+    writer = csv.DictWriter(
+        buffer,
+        fieldnames=["project_name", "name", "soll_stunden", "ist_stunden", "bonus_relevant"]
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+    buffer.seek(0)
+
+    filename_suffix = f"_project_{project_id}" if project_id else ""
+    filename = f"milestones{filename_suffix}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
         buffer,
         media_type="text/csv",

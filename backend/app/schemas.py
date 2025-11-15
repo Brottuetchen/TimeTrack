@@ -34,6 +34,22 @@ class EventUpdate(BaseModel):
     is_private: Optional[bool] = None
 
 
+class BulkEventUpdate(BaseModel):
+    """Schema for bulk event operations."""
+    event_ids: List[int] = Field(..., description="List of event IDs to update")
+    is_private: Optional[bool] = Field(None, description="Set privacy flag (True/False)")
+    delete: bool = Field(False, description="Delete events")
+    unassign: bool = Field(False, description="Remove assignments from events")
+
+
+class BulkEventResponse(BaseModel):
+    """Response schema for bulk event operations."""
+    updated_count: int = Field(..., description="Number of events updated")
+    deleted_count: int = Field(0, description="Number of events deleted")
+    unassigned_count: int = Field(0, description="Number of assignments removed")
+    event_ids: List[int] = Field(..., description="List of affected event IDs")
+
+
 class EventRead(BaseModel):
     id: int
     source_type: SourceType
@@ -147,3 +163,37 @@ class CallLogRead(CallLogBase):
 
     class Config:
         orm_mode = True
+
+
+
+class PhoneBookBase(BaseModel):
+    """Base schema for PhoneBook entries."""
+    name: str
+    number: str
+    company: Optional[str] = None
+    tags: Optional[List[str]] = None
+    user_id: Optional[str] = None
+
+
+class PhoneBookCreate(PhoneBookBase):
+    """Schema for creating a new PhoneBook entry."""
+    pass
+
+
+class PhoneBookUpdate(BaseModel):
+    """Schema for updating a PhoneBook entry."""
+    name: Optional[str] = None
+    number: Optional[str] = None
+    company: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+class PhoneBookRead(PhoneBookBase):
+    """Schema for reading PhoneBook entries with ID and timestamps."""
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+

@@ -8,6 +8,7 @@ import { BulkAssignBar } from "./components/BulkAssignBar";
 import { AdminPage } from "./components/AdminPage";
 import { PrivacyPage } from "./components/PrivacyPage";
 import {
+  bulkUpdateEvents,
   createAssignment,
   defaultRange,
   exportCsv,
@@ -226,6 +227,78 @@ function App() {
     }
   };
 
+  const handleBulkMarkPrivate = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+
+    if (!confirm(`${ids.length} Event(s) als privat markieren?`)) return;
+
+    try {
+      const result = await bulkUpdateEvents(ids, { is_private: true });
+      toast.success(`${result.updated_count} Event(s) als privat markiert`);
+      setEvents((prev) =>
+        prev.map((event) => (ids.includes(event.id) ? { ...event, is_private: true } : event))
+      );
+      setSelected(new Set());
+    } catch (err) {
+      console.error(err);
+      toast.error("Bulk-Privacy fehlgeschlagen");
+    }
+  };
+
+  const handleBulkMarkStandard = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+
+    if (!confirm(`${ids.length} Event(s) als Standard (nicht privat) markieren?`)) return;
+
+    try {
+      const result = await bulkUpdateEvents(ids, { is_private: false });
+      toast.success(`${result.updated_count} Event(s) als Standard markiert`);
+      setEvents((prev) =>
+        prev.map((event) => (ids.includes(event.id) ? { ...event, is_private: false } : event))
+      );
+      setSelected(new Set());
+    } catch (err) {
+      console.error(err);
+      toast.error("Bulk-Privacy fehlgeschlagen");
+    }
+  };
+
+  const handleBulkUnassign = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+
+    if (!confirm(`Zuweisungen von ${ids.length} Event(s) entfernen?`)) return;
+
+    try {
+      const result = await bulkUpdateEvents(ids, { unassign: true });
+      toast.success(`${result.unassigned_count} Zuweisung(en) entfernt`);
+      setSelected(new Set());
+      await loadEvents(); // Reload um Assignments zu aktualisieren
+    } catch (err) {
+      console.error(err);
+      toast.error("Bulk-Unassign fehlgeschlagen");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+
+    if (!confirm(`ACHTUNG: ${ids.length} Event(s) PERMANENT löschen?\n\nDieser Vorgang kann NICHT rückgängig gemacht werden!`)) return;
+
+    try {
+      const result = await bulkUpdateEvents(ids, { delete: true });
+      toast.success(`${result.deleted_count} Event(s) gelöscht`);
+      setEvents((prev) => prev.filter((event) => !ids.includes(event.id)));
+      setSelected(new Set());
+    } catch (err) {
+      console.error(err);
+      toast.error("Bulk-Delete fehlgeschlagen");
+    }
+  };
+
   const handleMasterdataUpload = async (file: File) => {
     try {
       const result = await uploadProjectCsv(file);
@@ -234,9 +307,10 @@ function App() {
       );
       await loadStatic();
       await loadEvents();
-    } catch (err) {
-      console.error(err);
-      toast.error("Import fehlgeschlagen");
+    } catch (err: any) {
+      console.error("Masterdata upload error:", err);
+      const errorMsg = err.response?.data?.detail || err.message || "Import fehlgeschlagen";
+      toast.error(`Import fehlgeschlagen: ${errorMsg}`);
     }
   };
 
@@ -327,6 +401,10 @@ function App() {
               onChange={setBulkForm}
               onApply={applyBulk}
               onClear={() => setSelected(new Set())}
+              onMarkPrivate={handleBulkMarkPrivate}
+              onMarkStandard={handleBulkMarkStandard}
+              onUnassign={handleBulkUnassign}
+              onDelete={handleBulkDelete}
             />
           )}
           <section>
