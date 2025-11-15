@@ -1,6 +1,15 @@
 import axios from "axios";
 import dayjs from "dayjs";
-import { Assignment, AssignmentPayload, Event, Filters, LoggingSettings, Milestone, Project, SourceType } from "./types";
+import {
+  Assignment,
+  AssignmentPayload,
+  Event,
+  Filters,
+  LoggingSettings,
+  Milestone,
+  Project,
+  SourceType,
+} from "./types";
 
 const runtimeBase =
   typeof window !== "undefined"
@@ -61,6 +70,36 @@ export async function activatePrivacyMode(durationMinutes?: number) {
 export async function clearPrivacyMode() {
   const { data } = await client.post("/settings/privacy/clear");
   return data as LoggingSettings;
+}
+
+export async function listBluetoothDevices() {
+  const { data } = await client.get("/bluetooth/devices");
+  return data.devices as { mac: string; name: string }[];
+}
+
+export async function scanBluetooth(timeout = 8) {
+  const { data } = await client.post("/bluetooth/scan", undefined, { params: { timeout } });
+  return data.devices as { mac: string; name: string }[];
+}
+
+export async function pairBluetooth(mac: string) {
+  const { data } = await client.post("/bluetooth/pair", { mac });
+  return data;
+}
+
+export async function connectBluetooth(mac: string) {
+  const { data } = await client.post("/bluetooth/connect", { mac });
+  return data;
+}
+
+export async function disconnectBluetooth(mac: string) {
+  const { data } = await client.post("/bluetooth/disconnect", { mac });
+  return data;
+}
+
+export async function triggerPbap(mac: string) {
+  const { data } = await client.post("/bluetooth/pbap", { mac });
+  return data;
 }
 
 export async function createAssignment(payload: AssignmentPayload) {

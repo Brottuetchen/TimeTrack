@@ -10,6 +10,7 @@ services:
       TIMETRACK_DB_PATH: /data/timetrack.db
     volumes:
       - timetrack-data:/data
+      - /var/run/dbus:/var/run/dbus
     ports:
       - "8000:8000"
     healthcheck:
