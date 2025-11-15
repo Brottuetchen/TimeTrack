@@ -272,12 +272,6 @@ function App() {
 
       {/* Header mit Navigation */}
       <header className="flex flex-wrap items-center gap-4">
-        <Navigation
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          theme={theme}
-          onThemeToggle={toggleTheme}
-        />
         <div className="flex-1 flex items-center gap-3">
           {logo && (
             <div
@@ -306,6 +300,12 @@ function App() {
             </button>
           </div>
         )}
+        <Navigation
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          theme={theme}
+          onThemeToggle={toggleTheme}
+        />
       </header>
 
       {/* Page Content */}
