@@ -25,12 +25,12 @@ def list_assignments(
     # Filter nach Event-Zeitstempel
     if start:
         start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
-        query = query.join(Assignment.event).filter(Event.timestamp >= start_dt)
+        query = query.join(Assignment.event).filter(Event.timestamp_start >= start_dt)
     if end:
         end_dt = datetime.fromisoformat(end.replace("Z", "+00:00"))
         if not start:  # Join nur wenn nicht schon durch start passiert
             query = query.join(Assignment.event)
-        query = query.filter(Event.timestamp < end_dt)
+        query = query.filter(Event.timestamp_start < end_dt)
 
     assignments = query.order_by(Assignment.id.desc()).limit(limit).all()
     return assignments
