@@ -5,13 +5,16 @@ export function LogoSettings() {
   const [logo, setLogo] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  const API_BASE = import.meta.env.VITE_API_BASE ||
+    `${window.location.protocol}//${window.location.hostname}:8000`;
+
   useEffect(() => {
     loadLogo();
   }, []);
 
   const loadLogo = async () => {
     try {
-      const response = await fetch("/api/settings/logo");
+      const response = await fetch(`${API_BASE}/settings/logo`);
       if (response.ok) {
         const data = await response.json();
         setLogo(data.logo_svg || null);
@@ -38,13 +41,17 @@ export function LogoSettings() {
     setUploading(true);
     try {
       const text = await file.text();
-      const response = await fetch("/api/settings/logo", {
+      const response = await fetch(`${API_BASE}/settings/logo`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logo_svg: text }),
       });
 
-      if (!response.ok) throw new Error("Upload fehlgeschlagen");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Logo upload failed:", response.status, errorText);
+        throw new Error(`Upload fehlgeschlagen (${response.status}): ${errorText}`);
+      }
 
       setLogo(text);
       toast.success("Logo hochgeladen");
@@ -52,8 +59,8 @@ export function LogoSettings() {
       // Trigger custom event für App.tsx
       window.dispatchEvent(new CustomEvent("logo-updated", { detail: { logo: text } }));
     } catch (err) {
-      console.error(err);
-      toast.error("Fehler beim Hochladen");
+      console.error("Logo upload error:", err);
+      toast.error(err instanceof Error ? err.message : "Fehler beim Hochladen");
     } finally {
       setUploading(false);
     }
@@ -61,7 +68,7 @@ export function LogoSettings() {
 
   const handleRemoveLogo = async () => {
     try {
-      const response = await fetch("/api/settings/logo", {
+      const response = await fetch(`${API_BASE}/settings/logo`, {
         method: "DELETE",
       });
 

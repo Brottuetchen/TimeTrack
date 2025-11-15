@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .. import schemas
 from ..database import get_db
-from ..models import Event, SourceType
+from ..models import Event, SourceType, Assignment
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -91,6 +91,102 @@ def update_event(event_id: int, payload: schemas.EventUpdate, db: Session = Depe
     db.commit()
     db.refresh(event)
     return event
+
+
+@router.patch("/bulk", response_model=schemas.BulkEventResponse)
+def bulk_update_events(payload: schemas.BulkEventUpdate, db: Session = Depends(get_db)):
+    """
+    Bulk-Update für Events:
+    - is_private: Privacy-Flag setzen (True/False)
+    - delete: Events löschen
+    - unassign: Assignments entfernen
+    """
+    if not payload.event_ids:
+        raise HTTPException(status_code=400, detail="event_ids darf nicht leer sein")
+
+    # Events laden
+    events = db.query(Event).filter(Event.id.in_(payload.event_ids)).all()
+    found_ids = {e.id for e in events}
+
+    # Nicht gefundene IDs
+    missing_ids = set(payload.event_ids) - found_ids
+    if missing_ids:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Events nicht gefunden: {sorted(missing_ids)}"
+        )
+
+    updated_count = 0
+    deleted_count = 0
+    unassigned_count = 0
+
+    # DELETE Operation
+    if payload.delete:
+        # Assignments zuerst löschen (FK-Constraint)
+        assignment_count = db.query(Assignment).filter(
+            Assignment.event_id.in_(payload.event_ids)
+        ).delete(synchronize_session=False)
+        unassigned_count += assignment_count
+
+        # Events löschen
+        deleted_count = db.query(Event).filter(
+            Event.id.in_(payload.event_ids)
+        ).delete(synchronize_session=False)
+
+        db.commit()
+
+        return schemas.BulkEventResponse(
+            updated_count=0,
+            deleted_count=deleted_count,
+            unassigned_count=unassigned_count,
+            event_ids=payload.event_ids
+        )
+
+    # UNASSIGN Operation
+    if payload.unassign:
+        unassigned_count = db.query(Assignment).filter(
+            Assignment.event_id.in_(payload.event_ids)
+        ).delete(synchronize_session=False)
+
+    # PRIVACY Operation
+    if payload.is_private is not None:
+        for event in events:
+            event.is_private = payload.is_private
+            updated_count += 1
+
+    db.commit()
+
+    return schemas.BulkEventResponse(
+        updated_count=updated_count,
+        deleted_count=deleted_count,
+        unassigned_count=unassigned_count,
+        event_ids=payload.event_ids
+    )
+
+
+@router.get("/unassigned", response_model=List[schemas.EventRead])
+def list_unassigned_events(
+    user_id: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """
+    Liste von Events ohne Assignment.
+    Wird für Quick-Assign Dialog verwendet.
+    """
+    # Subquery: Event-IDs mit Assignment
+    assigned_event_ids = db.query(Assignment.event_id).distinct()
+
+    # Query: Events ohne Assignment
+    query = db.query(Event).filter(~Event.id.in_(assigned_event_ids))
+
+    if user_id:
+        query = query.filter(Event.user_id == user_id)
+
+    events = query.order_by(Event.timestamp_start.desc()).offset(offset).limit(limit).all()
+    return events
+
 
 def _resolve_duration(start: datetime, end: Optional[datetime], duration_seconds: Optional[int]) -> Optional[int]:
     if duration_seconds is not None:
