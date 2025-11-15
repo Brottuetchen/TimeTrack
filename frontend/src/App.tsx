@@ -307,9 +307,10 @@ function App() {
       );
       await loadStatic();
       await loadEvents();
-    } catch (err) {
-      console.error(err);
-      toast.error("Import fehlgeschlagen");
+    } catch (err: any) {
+      console.error("Masterdata upload error:", err);
+      const errorMsg = err.response?.data?.detail || err.message || "Import fehlgeschlagen";
+      toast.error(`Import fehlgeschlagen: ${errorMsg}`);
     }
   };
 

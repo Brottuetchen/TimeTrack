@@ -215,8 +215,15 @@ export async function createBulkAssignments(
 export async function uploadProjectCsv(file: File) {
   const formData = new FormData();
   formData.append("file", file);
-  const { data } = await client.post("/import/projects", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return data;
+  try {
+    const { data } = await client.post("/import/projects", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  } catch (error: any) {
+    console.error("CSV upload error:", error);
+    console.error("Response data:", error.response?.data);
+    console.error("Response status:", error.response?.status);
+    throw error;
+  }
 }

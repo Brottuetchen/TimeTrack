@@ -47,7 +47,11 @@ export function LogoSettings() {
         body: JSON.stringify({ logo_svg: text }),
       });
 
-      if (!response.ok) throw new Error("Upload fehlgeschlagen");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Logo upload failed:", response.status, errorText);
+        throw new Error(`Upload fehlgeschlagen (${response.status}): ${errorText}`);
+      }
 
       setLogo(text);
       toast.success("Logo hochgeladen");
@@ -55,8 +59,8 @@ export function LogoSettings() {
       // Trigger custom event für App.tsx
       window.dispatchEvent(new CustomEvent("logo-updated", { detail: { logo: text } }));
     } catch (err) {
-      console.error(err);
-      toast.error("Fehler beim Hochladen");
+      console.error("Logo upload error:", err);
+      toast.error(err instanceof Error ? err.message : "Fehler beim Hochladen");
     } finally {
       setUploading(false);
     }
