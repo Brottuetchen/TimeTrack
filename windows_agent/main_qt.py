@@ -44,11 +44,11 @@ def isoformat(dt: datetime) -> str:
     return dt.isoformat()
 
 
-def build_logger(log_file: str) -> logging.Logger:
+def build_logger(log_file: str, debug: bool = False) -> logging.Logger:
     Path(log_file).parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
+        level=logging.DEBUG if debug else logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[
             logging.FileHandler(log_file, encoding="utf-8"),
             logging.StreamHandler(sys.stdout),
@@ -72,6 +72,7 @@ class Config:
     log_file: str
     verify_ssl: bool
     api_key: Optional[str] = None
+    debug_mode: bool = False
     settings_poll_seconds: int = 60
     # Call Sync Settings
     call_sync_enabled: bool = False
@@ -253,18 +254,22 @@ class WindowTracker(threading.Thread):
     def _handle_window(self, info: Optional[Dict]):
         now = datetime.now()
         if not self.settings_manager.logging_allowed():
+            self.logger.debug("Privacy-Modus aktiv, Tracking pausiert")
             if self.current_session:
                 self._flush_current()
             return
         if not info:
+            self.logger.debug("Kein aktives Fenster erkannt")
             if self.current_session:
                 self._flush_current()
             return
         if not self._should_track(info):
+            self.logger.debug("Fenster wird nicht getrackt: %s - %s", info["process"], info["title"][:50])
             if self.current_session:
                 self._flush_current()
             return
         if not self.current_session:
+            self.logger.debug("Neue Session gestartet: %s", info["process"])
             self.current_session = {
                 "timestamp_start": now,
                 "window_title": info["title"],
@@ -273,6 +278,7 @@ class WindowTracker(threading.Thread):
             return
         if info["process"] != self.current_session["process_name"] or info["title"] != self.current_session["window_title"]:
             self._flush_current()
+            self.logger.debug("Session-Wechsel: %s", info["process"])
             self.current_session = {
                 "timestamp_start": now,
                 "window_title": info["title"],
@@ -323,18 +329,27 @@ class WindowTracker(threading.Thread):
         title = info["title"].lower()
         remote_whitelist = self.settings_manager.whitelist()
         remote_blacklist = self.settings_manager.blacklist()
+
         if remote_whitelist and proc not in remote_whitelist:
+            self.logger.debug("⊗ %s: nicht in Remote-Whitelist", proc)
             return False
         if proc in remote_blacklist:
+            self.logger.debug("⊗ %s: in Remote-Blacklist", proc)
             return False
         if self.cfg.include_processes and proc not in self.cfg.include_processes:
+            self.logger.debug("⊗ %s: nicht in include_processes %s", proc, self.cfg.include_processes)
             return False
         if proc in self.cfg.exclude_processes:
+            self.logger.debug("⊗ %s: in exclude_processes", proc)
             return False
         if self.cfg.include_title_keywords and not any(keyword in title for keyword in self.cfg.include_title_keywords):
+            self.logger.debug("⊗ %s: Titel enthält keine include_title_keywords", proc)
             return False
         if any(keyword in title for keyword in self.cfg.exclude_title_keywords):
+            self.logger.debug("⊗ %s: Titel enthält exclude_title_keyword", proc)
             return False
+
+        self.logger.debug("✓ %s wird getrackt", proc)
         return True
 
 
@@ -597,7 +612,7 @@ class QtApp:
 
 def main():
     cfg = Config.load()
-    logger = build_logger(cfg.log_file)
+    logger = build_logger(cfg.log_file, debug=cfg.debug_mode)
 
     qt_app = QtApp(cfg, logger)
 
