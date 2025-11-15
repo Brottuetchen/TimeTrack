@@ -4,6 +4,12 @@ __pycache__/
 *.pyc
 *.pyo
 
+# PyInstaller
+build/
+dist/
+*.spec.lock
+windows_agent/TimeTrackAgent.exe
+
 # Node
 node_modules/
 frontend/node_modules/
