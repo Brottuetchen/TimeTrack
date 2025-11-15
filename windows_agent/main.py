@@ -49,6 +49,18 @@ def build_logger(log_file: str) -> logging.Logger:
     return logging.getLogger("timetrack_agent")
 
 
+def open_path(path: Path):
+    try:
+        if os.name == "nt":
+            os.startfile(str(path))
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+    except Exception as exc:
+        logging.getLogger("timetrack_agent").warning("Konnte %s nicht öffnen: %s", path, exc)
+
+
 @dataclass
 class Config:
     base_url: str
@@ -650,16 +662,4 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"Fataler Fehler: {exc}", file=sys.stderr)
         sys.exit(1)
-
-
-def open_path(path: Path):
-    try:
-        if os.name == "nt":
-            os.startfile(str(path))
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", str(path)])
-        else:
-            subprocess.Popen(["xdg-open", str(path)])
-    except Exception as exc:
-        logging.getLogger("timetrack_agent").warning("Konnte %s nicht öffnen: %s", path, exc)
 
