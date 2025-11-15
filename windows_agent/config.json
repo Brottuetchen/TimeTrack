@@ -1,5 +1,5 @@
 {
-  "base_url": "http://localhost:8000",
+  "base_url": "http://192.168.188.169:8000",
   "machine_id": "pc-lars",
   "user_id": "lars",
   "poll_interval_ms": 1500,

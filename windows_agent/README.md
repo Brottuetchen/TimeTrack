@@ -29,7 +29,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy config.example.json config.json
-python main.py
+pythonw main.py   # startet ohne Konsolenfenster
 ```
 
 ## Portable Build
@@ -39,6 +39,16 @@ pyinstaller --noconfirm --onefile --windowed --name TimeTrackTray main.py
 ```
 
 Resultat: `dist\TimeTrackTray.exe`. Diese Datei zusammen mit `config.json` auf den Ziel-PC kopieren (z. B. USB-Stick). Keine Installationsrechte erforderlich.
+
+## Tray-Steuerung
+
+- **Tracking aktiv** – Menüeintrag mit Häkchen zum Pausieren/Fortsetzen.
+- **Offene Events senden** – sofortiger Upload des Puffers.
+- **Status anzeigen** – Popup mit aktuellem Zustand (offene Events, letzter Upload, letzter Fehler).
+- **Config öffnen / Logdatei öffnen** – startet automatisch den Editor/Viewer mit den jeweiligen Dateien.
+- **Beenden** – stoppt Tray, Tracker und Sender sauber.
+
+Das Icon zeigt grün (aktiv) bzw. orange (pausiert); Tooltip aktualisiert sich automatisch. Verpackt mit `pyinstaller --windowed` läuft das Tool vollständig im Tray.
 
 ## Start auf Firmenrechner
 

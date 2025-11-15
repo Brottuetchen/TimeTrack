@@ -79,7 +79,7 @@ class CallLogger:
         }
         self.logger.info("Call added %s %s (%s)", call_id, number or "unknown", direction)
 
-    def _call_removed(self, call_path, reason):
+    def _call_removed(self, call_path, reason=None):
         call_id = str(call_path)
         call = self.active_calls.pop(call_id, None)
         if not call:

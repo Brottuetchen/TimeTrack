@@ -1,7 +1,9 @@
+import ctypes
 import json
 import logging
 import os
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -115,6 +117,10 @@ class EventBuffer:
     def _write(self, events: List[Dict]):
         self.path.write_text(json.dumps(events, indent=2), encoding="utf-8")
 
+    def count(self) -> int:
+        with self._lock:
+            return len(self._read())
+
 
 class WindowTracker(threading.Thread):
     def __init__(self, cfg: Config, buffer: EventBuffer, logger: logging.Logger):
@@ -226,6 +232,8 @@ class EventSender(threading.Thread):
         self.logger = logger
         self._stop_event = threading.Event()
         self.session = requests.Session()
+        self.last_success: Optional[datetime] = None
+        self.last_error: Optional[str] = None
 
     def stop(self):
         self._stop_event.set()
@@ -244,18 +252,24 @@ class EventSender(threading.Thread):
         if not events:
             return
         remaining = []
+        sent_any = False
         for event in events:
             if self._post_event(event):
                 self.logger.info("Event übertragen (%s)", event["process_name"])
+                sent_any = True
             else:
                 remaining.append(event)
         self.buffer.replace(remaining)
+        if sent_any:
+            self.last_success = datetime.now()
+            self.last_error = None
 
     def _post_event(self, event: Dict) -> bool:
         headers = {"Content-Type": "application/json"}
         if self.cfg.api_key:
             headers["Authorization"] = f"Bearer {self.cfg.api_key}"
         attempts = 3
+        last_error = ""
         for attempt in range(1, attempts + 1):
             try:
                 resp = self.session.post(
@@ -267,17 +281,37 @@ class EventSender(threading.Thread):
                 )
                 if resp.status_code < 300:
                     return True
-                raise requests.RequestException(f"HTTP {resp.status_code}: {resp.text}")
+                last_error = f"HTTP {resp.status_code}: {resp.text}"
+                raise requests.RequestException(last_error)
             except requests.RequestException as exc:
-                self.logger.warning("POST Versuch %s/%s fehlgeschlagen: %s", attempt, attempts, exc)
+                last_error = str(exc)
+                self.logger.warning("POST Versuch %s/%s fehlgeschlagen: %s", attempt, attempts, last_error)
                 time.sleep(2)
+        self.last_error = last_error or "Unbekannter Fehler"
         return False
 
 
+class StatusThread(threading.Thread):
+    def __init__(self, controller: "TrayController", interval: float = 15.0):
+        super().__init__(daemon=True)
+        self.controller = controller
+        self.interval = interval
+        self._stop_event = threading.Event()
+
+    def run(self):
+        while not self._stop_event.wait(self.interval):
+            self.controller.update_tooltip()
+
+    def stop(self):
+        self._stop_event.set()
+
+
 class TrayController:
-    def __init__(self, tracker: WindowTracker, sender: EventSender, logger: logging.Logger):
+    def __init__(self, tracker: WindowTracker, sender: EventSender, buffer: EventBuffer, cfg: Config, logger: logging.Logger):
         self.tracker = tracker
         self.sender = sender
+        self.buffer = buffer
+        self.cfg = cfg
         self.logger = logger
         self.tracking_enabled = True
         self.menu_toggle = MenuItem("Tracking aktiv", self.toggle_tracking, checked=lambda item: self.tracking_enabled)
@@ -288,9 +322,13 @@ class TrayController:
             menu=pystray.Menu(
                 self.menu_toggle,
                 MenuItem("Offene Events senden", self.send_now),
+                MenuItem("Status anzeigen", self.show_status),
+                MenuItem("Config öffnen", self.open_config),
+                MenuItem("Logdatei öffnen", self.open_log),
                 MenuItem("Beenden", self.quit),
             ),
         )
+        self.status_thread = StatusThread(self)
 
     def _icon(self, active: bool) -> Image.Image:
         color = (0, 180, 0) if active else (200, 80, 0)
@@ -308,10 +346,25 @@ class TrayController:
             self.tracker.join(timeout=2)
         icon.icon = self._icon(self.tracking_enabled)
         self.logger.info("Tracking %s", "aktiv" if self.tracking_enabled else "pausiert")
+        self.update_tooltip()
 
     def send_now(self, *_):
         self.logger.info("Manueller Send-Lauf")
         self.sender._send_batch()
+        self.update_tooltip()
+
+    def show_status(self, *_):
+        self._show_message(self.status_text(), "TimeTrack Status")
+
+    def open_config(self, *_):
+        open_path(Path(CONFIG_PATH))
+
+    def open_log(self, *_):
+        log_path = Path(self.cfg.log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        if not log_path.exists():
+            log_path.touch()
+        open_path(log_path)
 
     def quit(self, icon, item):
         self.logger.info("Tray wird beendet")
@@ -321,6 +374,7 @@ class TrayController:
         if self.sender.is_alive():
             self.sender.stop()
             self.sender.join(timeout=2)
+        self.status_thread.stop()
         icon.stop()
 
     def run(self):
@@ -328,7 +382,36 @@ class TrayController:
             self.tracker.start()
         if not self.sender.is_alive():
             self.sender.start()
+        self.status_thread.start()
+        self.update_tooltip()
         self.icon.run()
+
+    def status_text(self) -> str:
+        buffer_size = self.buffer.count()
+        last_sent = self.sender.last_success.strftime("%d.%m.%Y %H:%M") if self.sender.last_success else "noch nie"
+        last_error = self.sender.last_error or "–"
+        tracking = "Tracking aktiv" if self.tracking_enabled else "Tracking pausiert"
+        return (
+            f"{tracking}\n"
+            f"Offene Events: {buffer_size}\n"
+            f"Letzter Upload: {last_sent}\n"
+            f"Letzter Fehler: {last_error}"
+        )
+
+    def update_tooltip(self):
+        status = "aktiv" if self.tracking_enabled else "pausiert"
+        self.icon.title = f"TimeTrack – {status}"
+
+    def _show_message(self, text: str, title: str):
+        try:
+            if os.name == "nt":
+                ctypes.windll.user32.MessageBoxW(None, text, title, 0x40)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["osascript", "-e", f'display notification \"{text}\" with title \"{title}\"'])
+            else:
+                subprocess.Popen(["notify-send", title, text])
+        except Exception as exc:
+            self.logger.warning("Konnte Statusmeldung nicht anzeigen: %s", exc)
 
 
 def restart_thread(thread: WindowTracker) -> WindowTracker:
@@ -348,7 +431,7 @@ def main():
     tracker = WindowTracker(cfg, buffer, logger)
     sender = EventSender(cfg, buffer, logger)
 
-    controller = TrayController(tracker, sender, logger)
+    controller = TrayController(tracker, sender, buffer, cfg, logger)
 
     def handle_signal(signum, frame):
         logger.info("Signal %s, exit", signum)
@@ -365,3 +448,16 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"Fataler Fehler: {exc}", file=sys.stderr)
         sys.exit(1)
+
+
+def open_path(path: Path):
+    try:
+        if os.name == "nt":
+            os.startfile(str(path))
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+    except Exception as exc:
+        logging.getLogger("timetrack_agent").warning("Konnte %s nicht öffnen: %s", path, exc)
+
