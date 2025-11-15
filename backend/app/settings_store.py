@@ -10,6 +10,12 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "whitelist": [],
     "blacklist": [],
     "bluetooth_enabled": True,
+    # Microsoft Teams Graph API credentials (App-Only auth)
+    "teams_tenant_id": None,  # TODO: Set Azure AD tenant ID
+    "teams_client_id": None,  # TODO: Set app registration client ID
+    "teams_client_secret": None,  # TODO: Set app registration client secret
+    # Placetel webhook integration
+    "placetel_shared_secret": None,  # TODO: Set shared secret for webhook signature validation
 }
 
 

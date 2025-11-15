@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -17,6 +17,16 @@ class CallDirection(str, enum.Enum):
     INCOMING = "INCOMING"
     OUTGOING = "OUTGOING"
     MISSED = "MISSED"
+    INBOUND = "INBOUND"
+    OUTBOUND = "OUTBOUND"
+    INTERNAL = "INTERNAL"
+
+
+class CallSource(str, enum.Enum):
+    BLUETOOTH_PBAP = "bluetooth_pbap"
+    TEAMS = "teams"
+    PLACETEL = "placetel"
+    MANUAL = "manual"
 
 
 class Event(Base):
@@ -82,3 +92,24 @@ class Assignment(Base):
     event = relationship("Event", back_populates="assignments")
     project = relationship("Project", back_populates="assignments")
     milestone = relationship("Milestone", back_populates="assignments")
+
+
+class CallLog(Base):
+    """
+    Unified call log for all call sources (Bluetooth/PBAP, Teams, Placetel, manual).
+    Stores call metadata with source tracking and deduplication via external_id.
+    """
+    __tablename__ = "calllogs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), nullable=True, index=True)
+    source = Column(Enum(CallSource), nullable=False, index=True)
+    external_id = Column(String(256), nullable=False, index=True)
+    started_at = Column(DateTime, nullable=False, index=True)
+    ended_at = Column(DateTime, nullable=True)
+    direction = Column(Enum(CallDirection), nullable=True)
+    remote_number = Column(String(128), nullable=True)
+    remote_name = Column(String(256), nullable=True)
+    raw_payload = Column(JSON, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

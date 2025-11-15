@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from .models import CallDirection, SourceType
+from .models import CallDirection, CallSource, SourceType
 
 
 class EventBase(BaseModel):
@@ -116,6 +116,34 @@ class AssignmentRead(BaseModel):
     milestone: Optional[MilestoneRead]
     activity_type: Optional[str]
     comment: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+
+class CallLogBase(BaseModel):
+    """Base schema for CallLog with common fields."""
+    user_id: Optional[str] = None
+    source: CallSource
+    external_id: str
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    direction: Optional[CallDirection] = None
+    remote_number: Optional[str] = None
+    remote_name: Optional[str] = None
+    raw_payload: Optional[dict] = None
+
+
+class CallLogCreate(CallLogBase):
+    """Schema for creating a new CallLog entry."""
+    pass
+
+
+class CallLogRead(CallLogBase):
+    """Schema for reading CallLog entries with ID and timestamps."""
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True

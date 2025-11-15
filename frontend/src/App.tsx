@@ -7,6 +7,7 @@ import { BulkAssignBar } from "./components/BulkAssignBar";
 import { MasterdataImport } from "./components/MasterdataImport";
 import { BluetoothSetup } from "./components/BluetoothSetup";
 import { PrivacyControls } from "./components/PrivacyControls";
+import { CallSyncSettings } from "./components/CallSyncSettings";
 import {
   createAssignment,
   defaultRange,
@@ -291,6 +292,7 @@ function App() {
       </section>
       <PrivacyControls />
       <BluetoothSetup />
+      <CallSyncSettings />
     </div>
   );
 }

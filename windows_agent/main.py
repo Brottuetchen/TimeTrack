@@ -20,6 +20,8 @@ import win32process
 from PIL import Image, ImageDraw
 from pystray import MenuItem
 
+from call_sync import CallSyncManager
+
 CONFIG_PATH = Path(__file__).with_name("config.json")
 
 
@@ -63,6 +65,16 @@ class Config:
     verify_ssl: bool
     api_key: Optional[str] = None
     settings_poll_seconds: int = 60
+    # Call Sync Settings
+    call_sync_enabled: bool = False
+    call_sync_interval_minutes: int = 15
+    teams_enabled: bool = False
+    teams_tenant_id: Optional[str] = None
+    teams_client_id: Optional[str] = None
+    teams_client_secret: Optional[str] = None
+    placetel_enabled: bool = False
+    placetel_api_key: Optional[str] = None
+    placetel_api_url: Optional[str] = None
 
     def __post_init__(self):
         self.include_processes = [p.lower() for p in self.include_processes]
@@ -85,6 +97,16 @@ class Config:
         raw.setdefault("exclude_title_keywords", [])
         raw.setdefault("verify_ssl", False)
         raw.setdefault("settings_poll_seconds", 60)
+        # Call Sync defaults
+        raw.setdefault("call_sync_enabled", False)
+        raw.setdefault("call_sync_interval_minutes", 15)
+        raw.setdefault("teams_enabled", False)
+        raw.setdefault("teams_tenant_id", None)
+        raw.setdefault("teams_client_id", None)
+        raw.setdefault("teams_client_secret", None)
+        raw.setdefault("placetel_enabled", False)
+        raw.setdefault("placetel_api_key", None)
+        raw.setdefault("placetel_api_url", "https://api.placetel.de/v2")
         return cls(**raw)
 
 
@@ -398,27 +420,40 @@ class TrayController:
         cfg: Config,
         settings_manager: RemoteSettingsManager,
         logger: logging.Logger,
+        call_sync_manager: Optional[CallSyncManager] = None,
     ):
         self.tracker = tracker
         self.sender = sender
         self.buffer = buffer
         self.cfg = cfg
         self.settings_manager = settings_manager
+        self.call_sync_manager = call_sync_manager
         self.logger = logger
         self.tracking_enabled = True
         self.menu_toggle = MenuItem("Tracking aktiv", self.toggle_tracking, checked=lambda item: self.tracking_enabled)
+
+        # Menü-Einträge dynamisch zusammenstellen
+        menu_items = [
+            self.menu_toggle,
+            MenuItem("Offene Events senden", self.send_now),
+            MenuItem("Status anzeigen", self.show_status),
+        ]
+
+        # Call-Sync Menü-Eintrag nur wenn aktiviert
+        if call_sync_manager:
+            menu_items.append(MenuItem("Call-Sync jetzt ausführen", self.trigger_call_sync))
+
+        menu_items.extend([
+            MenuItem("Config öffnen", self.open_config),
+            MenuItem("Logdatei öffnen", self.open_log),
+            MenuItem("Beenden", self.quit),
+        ])
+
         self.icon = pystray.Icon(
             "timetrack",
             self._icon(active=True),
             "TimeTrack",
-            menu=pystray.Menu(
-                self.menu_toggle,
-                MenuItem("Offene Events senden", self.send_now),
-                MenuItem("Status anzeigen", self.show_status),
-                MenuItem("Config öffnen", self.open_config),
-                MenuItem("Logdatei öffnen", self.open_log),
-                MenuItem("Beenden", self.quit),
-            ),
+            menu=pystray.Menu(*menu_items),
         )
         self.status_thread = StatusThread(self)
 
@@ -445,6 +480,15 @@ class TrayController:
         self.sender._send_batch()
         self.update_tooltip()
 
+    def trigger_call_sync(self, *_):
+        """Triggert einen manuellen Call-Sync."""
+        if self.call_sync_manager:
+            self.logger.info("Manueller Call-Sync getriggert")
+            self.call_sync_manager.trigger_manual_sync()
+            self._show_message("Call-Sync wurde gestartet", "TimeTrack Call-Sync")
+        else:
+            self._show_message("Call-Sync ist nicht aktiviert", "TimeTrack Call-Sync")
+
     def show_status(self, *_):
         self._show_message(self.status_text(), "TimeTrack Status")
 
@@ -466,6 +510,9 @@ class TrayController:
         if self.sender.is_alive():
             self.sender.stop()
             self.sender.join(timeout=2)
+        if self.call_sync_manager and self.call_sync_manager.is_alive():
+            self.call_sync_manager.stop()
+            self.call_sync_manager.join(timeout=2)
         self.status_thread.stop()
         self.settings_manager.stop()
         icon.stop()
@@ -484,13 +531,45 @@ class TrayController:
         last_sent = self.sender.last_success.strftime("%d.%m.%Y %H:%M") if self.sender.last_success else "noch nie"
         last_error = self.sender.last_error or "–"
         tracking = "Tracking aktiv" if self.tracking_enabled else "Tracking pausiert"
-        return (
-            f"{tracking}\n"
-            f"Offene Events: {buffer_size}\n"
-            f"Letzter Upload: {last_sent}\n"
-            f"Letzter Fehler: {last_error}\n"
+
+        status_lines = [
+            f"{tracking}",
+            f"Offene Events: {buffer_size}",
+            f"Letzter Upload: {last_sent}",
+            f"Letzter Fehler: {last_error}",
             f"Privacy-Modus: {self.settings_manager.privacy_label()}"
-        )
+        ]
+
+        # Call-Sync Status hinzufügen wenn aktiviert
+        if self.call_sync_manager:
+            sync_status = self.call_sync_manager.get_status()
+            last_sync = sync_status.get("last_sync_time")
+            if last_sync:
+                from datetime import datetime
+                try:
+                    dt = datetime.fromisoformat(last_sync)
+                    last_sync_str = dt.strftime("%d.%m.%Y %H:%M")
+                except:
+                    last_sync_str = "unbekannt"
+            else:
+                last_sync_str = "noch nie"
+
+            next_sync_sec = sync_status.get("next_sync_in_seconds", 0)
+            next_sync_min = int(next_sync_sec / 60)
+
+            sync_ok = "✓" if sync_status.get("last_sync_success") else "✗"
+
+            status_lines.extend([
+                "",
+                f"Call-Sync: {sync_ok} (alle {sync_status['interval_minutes']} min)",
+                f"Letzter Sync: {last_sync_str}",
+                f"Nächster Sync in: {next_sync_min} min"
+            ])
+
+            if sync_status.get("last_sync_error"):
+                status_lines.append(f"Fehler: {sync_status['last_sync_error'][:50]}")
+
+        return "\n".join(status_lines)
 
     def update_tooltip(self):
         status = "aktiv" if self.tracking_enabled else "pausiert"
@@ -528,10 +607,36 @@ def main():
     tracker = WindowTracker(cfg, buffer, settings_manager, logger)
     sender = EventSender(cfg, buffer, logger)
 
-    controller = TrayController(tracker, sender, buffer, cfg, settings_manager, logger)
+    # CallSyncManager starten wenn aktiviert
+    call_sync_manager = None
+    if cfg.call_sync_enabled and (cfg.teams_enabled or cfg.placetel_enabled):
+        logger.info("Starte CallSyncManager...")
+        call_sync_manager = CallSyncManager(
+            base_url=cfg.base_url,
+            user_id=cfg.user_id,
+            logger=logger,
+            sync_interval_minutes=cfg.call_sync_interval_minutes,
+            teams_enabled=cfg.teams_enabled,
+            teams_tenant_id=cfg.teams_tenant_id,
+            teams_client_id=cfg.teams_client_id,
+            teams_client_secret=cfg.teams_client_secret,
+            placetel_enabled=cfg.placetel_enabled,
+            placetel_api_key=cfg.placetel_api_key,
+            placetel_api_url=cfg.placetel_api_url,
+            verify_ssl=cfg.verify_ssl,
+            api_key=cfg.api_key
+        )
+        call_sync_manager.start()
+    else:
+        logger.info("CallSyncManager deaktiviert (call_sync_enabled=%s, teams=%s, placetel=%s)",
+                   cfg.call_sync_enabled, cfg.teams_enabled, cfg.placetel_enabled)
+
+    controller = TrayController(tracker, sender, buffer, cfg, settings_manager, logger, call_sync_manager)
 
     def handle_signal(signum, frame):
         logger.info("Signal %s, exit", signum)
+        if call_sync_manager:
+            call_sync_manager.stop()
         controller.quit(controller.icon, None)
 
     signal.signal(signal.SIGINT, handle_signal)

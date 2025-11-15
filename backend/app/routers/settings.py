@@ -13,6 +13,11 @@ class LoggingSettingsUpdate(BaseModel):
     whitelist: Optional[List[str]] = None
     blacklist: Optional[List[str]] = None
     bluetooth_enabled: Optional[bool] = None
+    # Call Sync Settings
+    teams_tenant_id: Optional[str] = None
+    teams_client_id: Optional[str] = None
+    teams_client_secret: Optional[str] = None
+    placetel_shared_secret: Optional[str] = None
 
 
 class PrivacyRequest(BaseModel):
@@ -39,6 +44,28 @@ def update_logging_settings(payload: LoggingSettingsUpdate):
         settings["blacklist"] = [item.strip() for item in payload.blacklist if item.strip()]
     if payload.bluetooth_enabled is not None:
         settings["bluetooth_enabled"] = payload.bluetooth_enabled
+    # Call Sync Settings
+    if payload.teams_tenant_id is not None:
+        settings["teams_tenant_id"] = payload.teams_tenant_id.strip() if payload.teams_tenant_id else None
+    if payload.teams_client_id is not None:
+        settings["teams_client_id"] = payload.teams_client_id.strip() if payload.teams_client_id else None
+    if payload.teams_client_secret is not None:
+        settings["teams_client_secret"] = payload.teams_client_secret.strip() if payload.teams_client_secret else None
+    if payload.placetel_shared_secret is not None:
+        settings["placetel_shared_secret"] = payload.placetel_shared_secret.strip() if payload.placetel_shared_secret else None
+    save_settings(settings)
+    return get_logging_settings()
+
+
+@router.post("/logging")
+def update_logging_settings_post(payload: dict):
+    """
+    POST-Alternative für Windows Agent CallSyncManager.
+    Akzeptiert vollständiges Settings-Dict und merged es.
+    """
+    settings = load_settings()
+    # Merge übergebene Settings
+    settings.update(payload)
     save_settings(settings)
     return get_logging_settings()
 

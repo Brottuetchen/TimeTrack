@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
 from .bluetooth_agent import start_agent
-from .routers import assignments, bluetooth, events, export, imports, milestones, projects, settings
+from .routers import assignments, bluetooth, calls, events, export, imports, milestones, projects, settings
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("timetrack-main")
@@ -32,6 +32,7 @@ app.include_router(export.router)
 app.include_router(settings.router)
 app.include_router(bluetooth.router)
 app.include_router(imports.router)
+app.include_router(calls.router)
 
 
 @app.get("/health")

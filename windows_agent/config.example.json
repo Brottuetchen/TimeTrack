@@ -12,5 +12,15 @@
   "log_file": "%APPDATA%/TimeTrack/timetrack_agent.log",
   "verify_ssl": false,
   "api_key": null,
-  "settings_poll_seconds": 60
+  "settings_poll_seconds": 60,
+
+  "call_sync_enabled": true,
+  "call_sync_interval_minutes": 15,
+  "teams_enabled": false,
+  "teams_tenant_id": null,
+  "teams_client_id": null,
+  "teams_client_secret": null,
+  "placetel_enabled": false,
+  "placetel_api_key": null,
+  "placetel_api_url": "https://api.placetel.de/v2"
 }

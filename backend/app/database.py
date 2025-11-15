@@ -40,6 +40,7 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
+    _run_data_migrations()
 
 
 def _ensure_columns():
@@ -48,3 +49,11 @@ def _ensure_columns():
         column_names = {col[1] for col in columns}
         if "is_private" not in column_names:
             conn.exec_driver_sql("ALTER TABLE events ADD COLUMN is_private BOOLEAN DEFAULT 0;")
+
+
+def _run_data_migrations():
+    """Run data migrations after schema is created."""
+    from .migrations import auto_migrate_on_startup
+
+    with get_session() as session:
+        auto_migrate_on_startup(session)
