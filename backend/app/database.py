@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -44,7 +44,7 @@ def init_db():
 
 def _ensure_columns():
     with engine.connect() as conn:
-        columns = conn.execute("PRAGMA table_info(events);").fetchall()
+        columns = conn.exec_driver_sql("PRAGMA table_info(events);").fetchall()
         column_names = {col[1] for col in columns}
         if "is_private" not in column_names:
-            conn.execute("ALTER TABLE events ADD COLUMN is_private BOOLEAN DEFAULT 0;")
+            conn.exec_driver_sql("ALTER TABLE events ADD COLUMN is_private BOOLEAN DEFAULT 0;")
