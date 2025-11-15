@@ -29,8 +29,8 @@ def main():
     print()
 
     # 2. Log-Datei Check
-    log_file = config.get("log_file", "").replace("%APPDATA%",
-                                                   Path.home() / "AppData" / "Roaming")
+    appdata_path = str(Path.home() / "AppData" / "Roaming")
+    log_file = config.get("log_file", "").replace("%APPDATA%", appdata_path)
     log_path = Path(log_file)
     if log_path.exists():
         print(f"✓ Log-Datei gefunden: {log_path}")
@@ -50,8 +50,7 @@ def main():
         print()
 
     # 3. Buffer Check
-    buffer_file = config.get("buffer_file", "").replace("%APPDATA%",
-                                                         Path.home() / "AppData" / "Roaming")
+    buffer_file = config.get("buffer_file", "").replace("%APPDATA%", appdata_path)
     buffer_path = Path(buffer_file)
     if buffer_path.exists():
         buffer = json.loads(buffer_path.read_text(encoding="utf-8"))
