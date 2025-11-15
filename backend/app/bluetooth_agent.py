@@ -10,7 +10,10 @@ from dbus_fast.service import ServiceInterface, method
 
 from .bluetooth import run_bluetoothctl_script
 
+
+logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("bluetooth-agent")
+LOGGER.setLevel(logging.INFO)
 
 
 class RejectError(DBusError):
