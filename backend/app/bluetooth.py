@@ -110,6 +110,7 @@ def pair_device(mac: str) -> Tuple[int, str, str]:
         pairable on
         discoverable on
         pair {mac}
+        connect {mac}
         trust {mac}
         """
     )
