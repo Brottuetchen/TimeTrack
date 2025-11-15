@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Tuple
 
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+DEVICE_LINE = re.compile(r"Device\s+([0-9A-Fa-f:]{17})(?:\s+(.*))?")
 
 
 class BluetoothError(Exception):
@@ -26,13 +27,11 @@ def _parse_device_lines(*outputs: Iterable[str]) -> List[dict]:
             continue
         for raw_line in output.splitlines():
             line = raw_line.strip()
-            if not line.startswith("Device "):
+            match = DEVICE_LINE.search(line)
+            if not match:
                 continue
-            parts = line.split(" ", 2)
-            if len(parts) < 2:
-                continue
-            mac = parts[1]
-            name = parts[2] if len(parts) >= 3 else "Unbekannt"
+            mac = match.group(1).upper()
+            name = match.group(2).strip() if match.group(2) else "Unbekannt"
             devices.setdefault(mac, {"mac": mac, "name": name})
     return list(devices.values())
 
@@ -65,12 +64,16 @@ def _run(command: List[str], input_data: str | None = None, timeout: int = 30) -
 
 def run_bluetoothctl_script(commands: List[str], timeout: int = 30) -> Tuple[int, str, str]:
     script = "\n".join(commands + ["quit"])
-    return _run(["bluetoothctl"], input_data=script, timeout=timeout)
+    cmd = ["bluetoothctl", "--agent", "NoInputNoOutput"]
+    return _run(cmd, input_data=script, timeout=timeout)
 
 
 def scan_devices(timeout: int = 8) -> dict:
-    run_bluetoothctl_script(["power on", "agent on", "default-agent"], timeout=10)
-    code, scan_stdout, scan_stderr = _run(["bluetoothctl", "--timeout", str(timeout), "scan", "on"], timeout=timeout + 3)
+    run_bluetoothctl_script(["power on"], timeout=10)
+    code, scan_stdout, scan_stderr = _run(
+        ["bluetoothctl", "--agent", "NoInputNoOutput", "--timeout", str(timeout), "scan", "on"],
+        timeout=timeout + 3,
+    )
     if code != 0:
         raise BluetoothError(scan_stderr.strip() or "Scan fehlgeschlagen")
 
@@ -104,8 +107,6 @@ def pair_device(mac: str) -> Tuple[int, str, str]:
     script = textwrap.dedent(
         f"""
         power on
-        agent on
-        default-agent
         pairable on
         discoverable on
         pair {mac}
