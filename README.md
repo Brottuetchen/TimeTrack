@@ -87,7 +87,8 @@ npm run dev -- --host
 - Optional: `kunde`, `notizen`, `milestone_name`/`Arbeitspaket`, `Sollstunden`, `Erbrachte Stunden`, `bonus_relevant`. Alle weiteren Felder werden ignoriert.
 - `Sollstunden`/`Erbrachte Stunden` dürfen Dezimalzahlen mit Komma oder Punkt enthalten; sie landen als Stundenwerte direkt am Milestone (`soll_stunden`, `ist_stunden`).
 - UI besitzt einen Dark-Mode-Toggle (rechts oben, ☀️/🌙) — Zustand wird lokal gespeichert.
-- Activity-Auswahl ist jetzt ein Dropdown (Planung/Baustelle/...); bei Telefon-Events wird automatisch „Telefon“, bei Fenster-Events „PC“ vorgeschlagen. Kommentare werden initial aus den Eventdaten befüllt (z. B. „Anruf Kunde Müller (+4917…)“ oder „Fenster AutoCAD – Werkhalle.dwg“), können aber jederzeit überschrieben werden.
+- Activity-Auswahl ist jetzt ein Dropdown (Planung/Baustelle/…); bei Telefon-Events wird automatisch „Telefon“, bei Fenster-Events „PC“ vorgeschlagen. Kommentare werden initial aus den Eventdaten befüllt (z. B. „Anruf Kunde Müller (+4917…)“ oder „Fenster AutoCAD – Werkhalle.dwg“), können aber jederzeit überschrieben werden.
+- Bluetooth-Setup-Karte zeigt die wichtigsten Pairing-/PBAP-Kommandos inkl. Copy-Buttons direkt im UI, damit du iPhone und Pi ohne Docs neu verbinden kannst.
 
 ## Offline-USB Betriebsmodus
 

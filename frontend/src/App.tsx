@@ -5,6 +5,7 @@ import { FiltersBar } from "./components/FiltersBar";
 import { EventsTable } from "./components/EventsTable";
 import { BulkAssignBar } from "./components/BulkAssignBar";
 import { MasterdataImport } from "./components/MasterdataImport";
+import { BluetoothSetup } from "./components/BluetoothSetup";
 import {
   createAssignment,
   defaultRange,
@@ -274,6 +275,7 @@ function App() {
           />
         )}
       </section>
+      <BluetoothSetup />
     </div>
   );
 }
