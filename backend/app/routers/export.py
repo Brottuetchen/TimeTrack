@@ -18,6 +18,7 @@ def export_csv(
     start: Optional[datetime] = Query(None),
     end: Optional[datetime] = Query(None),
     source_type: Optional[SourceType] = Query(None),
+    include_private: bool = Query(False),
     db: Session = Depends(get_db),
 ):
     query = (
@@ -32,6 +33,8 @@ def export_csv(
         query = query.filter(Event.timestamp_start <= end)
     if source_type:
         query = query.filter(Event.source_type == source_type)
+    if not include_private:
+        query = query.filter(Event.is_private.is_(False))
 
     rows = []
     for assignment in query.all():
@@ -85,4 +88,3 @@ def export_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-

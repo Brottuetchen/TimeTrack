@@ -7,6 +7,7 @@ export interface Event {
   timestamp_start: string;
   timestamp_end?: string;
   duration_seconds?: number;
+  is_private: boolean;
   phone_number?: string;
   contact_name?: string;
   direction?: CallDirection;
@@ -62,4 +63,12 @@ export interface BulkForm {
   milestone_id?: number;
   activity_type?: string;
   comment?: string;
+}
+
+export interface LoggingSettings {
+  whitelist: string[];
+  blacklist: string[];
+  bluetooth_enabled: boolean;
+  privacy_mode_until: string | null;
+  server_time: string;
 }

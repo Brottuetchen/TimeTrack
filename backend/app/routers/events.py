@@ -81,6 +81,17 @@ def list_events(
     return events
 
 
+@router.patch("/{event_id}", response_model=schemas.EventRead)
+def update_event(event_id: int, payload: schemas.EventUpdate, db: Session = Depends(get_db)):
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if payload.is_private is not None:
+        event.is_private = payload.is_private
+    db.commit()
+    db.refresh(event)
+    return event
+
 def _resolve_duration(start: datetime, end: Optional[datetime], duration_seconds: Optional[int]) -> Optional[int]:
     if duration_seconds is not None:
         return duration_seconds

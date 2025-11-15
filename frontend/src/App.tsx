@@ -6,6 +6,7 @@ import { EventsTable } from "./components/EventsTable";
 import { BulkAssignBar } from "./components/BulkAssignBar";
 import { MasterdataImport } from "./components/MasterdataImport";
 import { BluetoothSetup } from "./components/BluetoothSetup";
+import { PrivacyControls } from "./components/PrivacyControls";
 import {
   createAssignment,
   defaultRange,
@@ -14,6 +15,7 @@ import {
   fetchEvents,
   fetchMilestones,
   fetchProjects,
+  updateEventPrivacy,
   updateAssignment,
   uploadProjectCsv,
 } from "./api";
@@ -209,6 +211,17 @@ function App() {
     }
   };
 
+  const handlePrivacyChange = async (eventId: number, isPrivate: boolean) => {
+    try {
+      await updateEventPrivacy(eventId, isPrivate);
+      setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, is_private: isPrivate } : event)));
+      toast.success(isPrivate ? "Event als privat markiert" : "Event wieder sichtbar");
+    } catch (err) {
+      console.error(err);
+      toast.error("Privacy-Markierung fehlgeschlagen");
+    }
+  };
+
   const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   return (
@@ -272,9 +285,11 @@ function App() {
             activityOptions={ACTIVITY_OPTIONS}
             getDefaultActivity={defaultActivity}
             getDefaultComment={defaultComment}
+            onPrivacyChange={handlePrivacyChange}
           />
         )}
       </section>
+      <PrivacyControls />
       <BluetoothSetup />
     </div>
   );

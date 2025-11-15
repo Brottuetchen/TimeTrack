@@ -94,6 +94,9 @@ class CallLogger:
         direction = "INCOMING" if properties.get("Incoming") else "OUTGOING"
         number = properties.get("LineIdentification", "")
         contact = self.contacts.get(number, "")
+        if not self._logging_allowed():
+            self.logger.info("Privacy aktiv – Call ignoriert (%s)", number or "unbekannt")
+            return
         self.active_calls[call_id] = {
             "start": now,
             "direction": direction,
@@ -127,6 +130,9 @@ class CallLogger:
         self._send_event(payload)
 
     def _send_event(self, payload: Dict):
+        if not self._logging_allowed():
+            self.logger.info("Privacy aktiv – Call verworfen")
+            return
         url = f"{API_BASE_URL}/events/phone"
         try:
             resp = self.session.post(url, json=payload, timeout=10)
@@ -134,6 +140,21 @@ class CallLogger:
                 self.logger.error("API error %s: %s", resp.status_code, resp.text)
         except requests.RequestException as exc:
             self.logger.error("Could not send event: %s", exc)
+
+    def _logging_allowed(self) -> bool:
+        try:
+            resp = self.session.get(f"{API_BASE_URL}/settings/logging", timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+            until = data.get("privacy_mode_until")
+            if not until:
+                return True
+            if isinstance(until, str) and until.lower() == "indefinite":
+                return False
+            ts = datetime.fromisoformat(until)
+            return datetime.utcnow() >= ts
+        except requests.RequestException:
+            return True
 
     def stop(self, *_):
         self.logger.info("Stopping call logger")

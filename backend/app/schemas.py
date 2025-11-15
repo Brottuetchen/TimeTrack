@@ -30,12 +30,17 @@ class WindowEventCreate(EventBase):
     process_name: str
 
 
+class EventUpdate(BaseModel):
+    is_private: Optional[bool] = None
+
+
 class EventRead(BaseModel):
     id: int
     source_type: SourceType
     timestamp_start: datetime
     timestamp_end: Optional[datetime]
     duration_seconds: Optional[int]
+    is_private: bool
     phone_number: Optional[str]
     contact_name: Optional[str]
     direction: Optional[CallDirection]

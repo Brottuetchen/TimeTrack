@@ -11,5 +11,6 @@
   "buffer_file": "%APPDATA%/TimeTrack/buffer.json",
   "log_file": "%APPDATA%/TimeTrack/timetrack_agent.log",
   "verify_ssl": false,
-  "api_key": null
+  "api_key": null,
+  "settings_poll_seconds": 60
 }

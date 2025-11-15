@@ -13,6 +13,7 @@ interface Props {
   getDefaultComment: (event: Event) => string;
   onSelect: (eventId: number, checked: boolean) => void;
   onAssign: (eventId: number, payload: { project_id?: number; milestone_id?: number; activity_type?: string; comment?: string }) => void;
+  onPrivacyChange: (eventId: number, isPrivate: boolean) => void;
 }
 
 export function EventsTable({
@@ -26,6 +27,7 @@ export function EventsTable({
   getDefaultComment,
   onSelect,
   onAssign,
+  onPrivacyChange,
 }: Props) {
   const milestoneOptions = (projectId?: number) => milestones.filter((m) => !projectId || m.project_id === projectId);
   const columnWidths = {
@@ -75,6 +77,9 @@ export function EventsTable({
             <th className="px-2 py-3" style={{ width: columnWidths.select }}>
               Activity
             </th>
+            <th className="px-2 py-3" style={{ width: columnWidths.select }}>
+              Privat
+            </th>
             <th className="px-2 py-3">Kommentar</th>
           </tr>
         </thead>
@@ -87,7 +92,10 @@ export function EventsTable({
             return (
               <tr
                 key={event.id}
-                className="border-b border-slate-200 dark:border-slate-700 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                className={clsx(
+                  "border-b border-slate-200 dark:border-slate-700 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100",
+                  event.is_private && "opacity-60",
+                )}
               >
                 <td className="px-2 py-3 align-top w-10 text-center">
                   <input
@@ -185,6 +193,16 @@ export function EventsTable({
                         {activity}
                       </option>
                     ))}
+                  </select>
+                </td>
+                <td className="px-2 py-3 align-top" style={{ width: columnWidths.select }}>
+                  <select
+                    className="border rounded px-2 py-1 text-sm w-full bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
+                    value={event.is_private ? "private" : "standard"}
+                    onChange={(e) => onPrivacyChange(event.id, e.target.value === "private")}
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="private">Privat</option>
                   </select>
                 </td>
                 <td className="px-2 py-3 align-top">

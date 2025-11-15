@@ -39,3 +39,12 @@ def init_db():
     from . import models  # noqa: F401  # Import for side effects
 
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
+
+
+def _ensure_columns():
+    with engine.connect() as conn:
+        columns = conn.execute("PRAGMA table_info(events);").fetchall()
+        column_names = {col[1] for col in columns}
+        if "is_private" not in column_names:
+            conn.execute("ALTER TABLE events ADD COLUMN is_private BOOLEAN DEFAULT 0;")

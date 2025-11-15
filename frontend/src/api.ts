@@ -1,6 +1,6 @@
 import axios from "axios";
 import dayjs from "dayjs";
-import { Assignment, AssignmentPayload, Event, Filters, Milestone, Project, SourceType } from "./types";
+import { Assignment, AssignmentPayload, Event, Filters, LoggingSettings, Milestone, Project, SourceType } from "./types";
 
 const runtimeBase =
   typeof window !== "undefined"
@@ -40,6 +40,29 @@ export async function fetchAssignments(): Promise<Assignment[]> {
   return data;
 }
 
+export async function fetchLoggingSettings(): Promise<LoggingSettings> {
+  const { data } = await client.get<LoggingSettings>("/settings/logging");
+  return data;
+}
+
+export async function saveLoggingSettings(payload: Partial<LoggingSettings>) {
+  const { data } = await client.put("/settings/logging", payload);
+  return data as LoggingSettings;
+}
+
+export async function activatePrivacyMode(durationMinutes?: number) {
+  const { data } = await client.post("/settings/privacy", {
+    duration_minutes: durationMinutes,
+    indefinite: !durationMinutes,
+  });
+  return data as LoggingSettings;
+}
+
+export async function clearPrivacyMode() {
+  const { data } = await client.post("/settings/privacy/clear");
+  return data as LoggingSettings;
+}
+
 export async function createAssignment(payload: AssignmentPayload) {
   const { data } = await client.post("/assignments", payload);
   return data;
@@ -67,6 +90,11 @@ export function defaultRange(): Filters {
     source: "all",
     user: "",
   };
+}
+
+export async function updateEventPrivacy(eventId: number, isPrivate: boolean) {
+  const { data } = await client.patch(`/events/${eventId}`, { is_private: isPrivate });
+  return data as Event;
 }
 
 export async function uploadProjectCsv(file: File) {

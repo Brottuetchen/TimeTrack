@@ -112,3 +112,5 @@ Schritt-für-Schritt-Anleitung: `docs/offline_usb_setup.md`. Kurzfassung:
 - Call-Logger Logs: `journalctl -u timetrack-call-logger -f`
 
 Alles bleibt lokal/offline, bis du CSV exportierst und manuell importierst.
+
+- Privacy/Filter-Karte im UI verwaltet Whitelist/Blacklist sowie den Privacy-Modus (Logging 15/30 Minuten oder unbegrenzt pausieren). Der Windows-Agent pollt `/settings/logging` und respektiert diese Vorgaben automatisch.

@@ -27,6 +27,7 @@ class Event(Base):
     timestamp_start = Column(DateTime, nullable=False, default=datetime.utcnow)
     timestamp_end = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
+    is_private = Column(Boolean, nullable=False, default=False)
 
     phone_number = Column(String(64), nullable=True)
     contact_name = Column(String(128), nullable=True)

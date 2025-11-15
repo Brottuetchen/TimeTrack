@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -62,6 +62,7 @@ class Config:
     log_file: str
     verify_ssl: bool
     api_key: Optional[str] = None
+    settings_poll_seconds: int = 60
 
     def __post_init__(self):
         self.include_processes = [p.lower() for p in self.include_processes]
@@ -83,8 +84,79 @@ class Config:
         raw.setdefault("include_title_keywords", [])
         raw.setdefault("exclude_title_keywords", [])
         raw.setdefault("verify_ssl", False)
+        raw.setdefault("settings_poll_seconds", 60)
         return cls(**raw)
 
+
+class RemoteSettingsManager(threading.Thread):
+    def __init__(self, cfg: Config, logger: logging.Logger):
+        super().__init__(daemon=True)
+        self.cfg = cfg
+        self.logger = logger
+        self.session = requests.Session()
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._state: Dict[str, Optional[str] | List[str]] = {
+            "privacy_mode_until": None,
+            "whitelist": [],
+            "blacklist": [],
+        }
+
+    def run(self):
+        while not self._stop_event.is_set():
+            self._fetch()
+            self._stop_event.wait(max(15, self.cfg.settings_poll_seconds))
+
+    def stop(self):
+        self._stop_event.set()
+
+    def _fetch(self):
+        try:
+            resp = self.session.get(f"{self.cfg.base_url}/settings/logging", timeout=10, verify=self.cfg.verify_ssl)
+            resp.raise_for_status()
+            data = resp.json()
+            with self._lock:
+                self._state["privacy_mode_until"] = data.get("privacy_mode_until")
+                self._state["whitelist"] = [entry.lower() for entry in data.get("whitelist", [])]
+                self._state["blacklist"] = [entry.lower() for entry in data.get("blacklist", [])]
+        except requests.RequestException as exc:
+            self.logger.debug("Remote settings fetch failed: %s", exc)
+
+    def logging_allowed(self) -> bool:
+        with self._lock:
+            until = self._state.get("privacy_mode_until")
+        if not until:
+            return True
+        if isinstance(until, str) and until.lower() == "indefinite":
+            return False
+        try:
+            ts = datetime.fromisoformat(until)
+        except ValueError:
+            return True
+        return datetime.now(timezone.utc) >= ts
+
+    def whitelist(self) -> List[str]:
+        with self._lock:
+            return list(self._state.get("whitelist", []))
+
+    def blacklist(self) -> List[str]:
+        with self._lock:
+            return list(self._state.get("blacklist", []))
+
+    def privacy_label(self) -> str:
+        with self._lock:
+            until = self._state.get("privacy_mode_until")
+        if not until:
+            return "aktiv"
+        if isinstance(until, str) and until.lower() == "indefinite":
+            return "pausiert (unbegrenzt)"
+        try:
+            ts = datetime.fromisoformat(until)
+        except ValueError:
+            return "pausiert (unbekannt)"
+        if datetime.now(timezone.utc) < ts:
+            return f"pausiert bis {ts.astimezone().strftime('%H:%M')}"
+        return "aktiv"
 
 class EventBuffer:
     def __init__(self, path: str):
@@ -123,10 +195,11 @@ class EventBuffer:
 
 
 class WindowTracker(threading.Thread):
-    def __init__(self, cfg: Config, buffer: EventBuffer, logger: logging.Logger):
+    def __init__(self, cfg: Config, buffer: EventBuffer, settings_manager: "RemoteSettingsManager", logger: logging.Logger):
         super().__init__(daemon=True)
         self.cfg = cfg
         self.buffer = buffer
+        self.settings_manager = settings_manager
         self.logger = logger
         self.poll_interval = max(0.2, cfg.poll_interval_ms / 1000)
         self._stop_event = threading.Event()
@@ -148,6 +221,10 @@ class WindowTracker(threading.Thread):
 
     def _handle_window(self, info: Optional[Dict]):
         now = datetime.now()
+        if not self.settings_manager.logging_allowed():
+            if self.current_session:
+                self._flush_current()
+            return
         if not info:
             if self.current_session:
                 self._flush_current()
@@ -213,6 +290,12 @@ class WindowTracker(threading.Thread):
     def _should_track(self, info: Dict) -> bool:
         proc = info["process"]
         title = info["title"].lower()
+        remote_whitelist = self.settings_manager.whitelist()
+        remote_blacklist = self.settings_manager.blacklist()
+        if remote_whitelist and proc not in remote_whitelist:
+            return False
+        if proc in remote_blacklist:
+            return False
         if self.cfg.include_processes and proc not in self.cfg.include_processes:
             return False
         if proc in self.cfg.exclude_processes:
@@ -307,11 +390,20 @@ class StatusThread(threading.Thread):
 
 
 class TrayController:
-    def __init__(self, tracker: WindowTracker, sender: EventSender, buffer: EventBuffer, cfg: Config, logger: logging.Logger):
+    def __init__(
+        self,
+        tracker: WindowTracker,
+        sender: EventSender,
+        buffer: EventBuffer,
+        cfg: Config,
+        settings_manager: RemoteSettingsManager,
+        logger: logging.Logger,
+    ):
         self.tracker = tracker
         self.sender = sender
         self.buffer = buffer
         self.cfg = cfg
+        self.settings_manager = settings_manager
         self.logger = logger
         self.tracking_enabled = True
         self.menu_toggle = MenuItem("Tracking aktiv", self.toggle_tracking, checked=lambda item: self.tracking_enabled)
@@ -375,6 +467,7 @@ class TrayController:
             self.sender.stop()
             self.sender.join(timeout=2)
         self.status_thread.stop()
+        self.settings_manager.stop()
         icon.stop()
 
     def run(self):
@@ -395,7 +488,8 @@ class TrayController:
             f"{tracking}\n"
             f"Offene Events: {buffer_size}\n"
             f"Letzter Upload: {last_sent}\n"
-            f"Letzter Fehler: {last_error}"
+            f"Letzter Fehler: {last_error}\n"
+            f"Privacy-Modus: {self.settings_manager.privacy_label()}"
         )
 
     def update_tooltip(self):
@@ -428,10 +522,13 @@ def main():
     logger = build_logger(cfg.log_file)
     buffer = EventBuffer(cfg.buffer_file)
 
-    tracker = WindowTracker(cfg, buffer, logger)
+    settings_manager = RemoteSettingsManager(cfg, logger)
+    settings_manager.start()
+
+    tracker = WindowTracker(cfg, buffer, settings_manager, logger)
     sender = EventSender(cfg, buffer, logger)
 
-    controller = TrayController(tracker, sender, buffer, cfg, logger)
+    controller = TrayController(tracker, sender, buffer, cfg, settings_manager, logger)
 
     def handle_signal(signum, frame):
         logger.info("Signal %s, exit", signum)

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
-from .routers import assignments, events, export, imports, milestones, projects
+from .routers import assignments, events, export, imports, milestones, projects, settings
 
 init_db()
 
@@ -21,6 +21,7 @@ app.include_router(projects.router)
 app.include_router(milestones.router)
 app.include_router(assignments.router)
 app.include_router(export.router)
+app.include_router(settings.router)
 app.include_router(imports.router)
 
 

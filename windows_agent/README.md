@@ -45,6 +45,7 @@ Resultat: `dist\TimeTrackTray.exe`. Diese Datei zusammen mit `config.json` auf d
 - **Tracking aktiv** – Menüeintrag mit Häkchen zum Pausieren/Fortsetzen.
 - **Offene Events senden** – sofortiger Upload des Puffers.
 - **Status anzeigen** – Popup mit aktuellem Zustand (offene Events, letzter Upload, letzter Fehler).
+- **Privacy/Filter** – Agent zieht Whitelist/Blacklist + Privacy-Zeitfenster automatisch von `/settings/logging` und stoppt das Logging während des Privacy-Modus.
 - **Config öffnen / Logdatei öffnen** – startet automatisch den Editor/Viewer mit den jeweiligen Dateien.
 - **Beenden** – stoppt Tray, Tracker und Sender sauber.
 
