@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import textwrap
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
@@ -19,18 +19,21 @@ def _strip_ansi(text: str | None) -> str:
     return ANSI_ESCAPE.sub("", text)
 
 
-def _parse_device_lines(output: str) -> List[dict]:
+def _parse_device_lines(*outputs: Iterable[str]) -> List[dict]:
     devices: Dict[str, dict] = {}
-    for raw_line in output.splitlines():
-        line = raw_line.strip()
-        if not line.startswith("Device "):
+    for output in outputs:
+        if not output:
             continue
-        parts = line.split(" ", 2)
-        if len(parts) < 2:
-            continue
-        mac = parts[1]
-        name = parts[2] if len(parts) >= 3 else "Unbekannt"
-        devices.setdefault(mac, {"mac": mac, "name": name})
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            if not line.startswith("Device "):
+                continue
+            parts = line.split(" ", 2)
+            if len(parts) < 2:
+                continue
+            mac = parts[1]
+            name = parts[2] if len(parts) >= 3 else "Unbekannt"
+            devices.setdefault(mac, {"mac": mac, "name": name})
     return list(devices.values())
 
 
@@ -72,12 +75,12 @@ def scan_devices(timeout: int = 8) -> List[dict]:
         raise BluetoothError(scan_stderr.strip() or "Scan fehlgeschlagen")
 
     devices: Dict[str, dict] = {}
-    for dev in _parse_device_lines(scan_stdout):
+    for dev in _parse_device_lines(scan_stdout, scan_stderr):
         devices[dev["mac"]] = dev
 
     code, stdout, stderr = _run(["bluetoothctl", "devices"], timeout=10)
     if code == 0:
-        for dev in _parse_device_lines(stdout):
+        for dev in _parse_device_lines(stdout, stderr):
             devices.setdefault(dev["mac"], dev)
 
     return list(devices.values())
@@ -87,7 +90,7 @@ def list_devices() -> List[dict]:
     code, stdout, stderr = _run(["bluetoothctl", "devices"], timeout=10)
     if code != 0:
         raise BluetoothError(stderr.strip() or "Geraeteliste fehlgeschlagen")
-    return _parse_device_lines(stdout)
+    return _parse_device_lines(stdout, stderr)
 
 
 def pair_device(mac: str) -> Tuple[int, str, str]:
