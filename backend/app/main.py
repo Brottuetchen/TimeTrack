@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,8 +7,12 @@ from .database import init_db
 from .bluetooth_agent import start_agent
 from .routers import assignments, bluetooth, events, export, imports, milestones, projects, settings
 
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger("timetrack-main")
+
 init_db()
 start_agent()
+LOGGER.info("Bluetooth agent bootstrap triggered")
 
 app = FastAPI(title="TimeTrack MVP", version="0.1.0")
 
