@@ -5,7 +5,7 @@ Requires=bluetooth.service ofono.service
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pi/TimeTrack/pi_services/call_logger
+WorkingDirectory=/home/trapp/TimeTrack/pi_services/call_logger
 Environment=TIMETRACK_API=http://127.0.0.1:8000
 Environment=TIMETRACK_DEVICE_ID=raspi-pi5
 Environment=TIMETRACK_USER_ID=default
@@ -13,7 +13,7 @@ Environment=TIMETRACK_USER_ID=default
 # Environment=TIMETRACK_PBAP_DEVICE=90:B7:90:3D:03:22
 Environment=TIMETRACK_PBAP_STATE=/var/lib/timetrack/pbap_state.json
 Environment=TIMETRACK_PBAP_INTERVAL=900
-ExecStart=/home/pi/TimeTrack/pi_services/call_logger/.venv/bin/python3 call_logger.py
+ExecStart=/home/trapp/TimeTrack/pi_services/call_logger/.venv/bin/python3 call_logger.py
 Restart=on-failure
 RestartSec=5
 
