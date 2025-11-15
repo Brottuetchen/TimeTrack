@@ -8,6 +8,7 @@ import {
   scanBluetooth,
   triggerPbap,
 } from "../api";
+import type { BluetoothCommandResult } from "../api";
 
 interface BluetoothDevice {
   mac: string;
@@ -22,6 +23,20 @@ export const BluetoothSetup = () => {
 
   const appendLog = (message: string) => {
     setLogs((prev) => [...prev.slice(-25), `${new Date().toLocaleTimeString()} ${message}`]);
+  };
+
+  const logCommandResult = (result?: { stdout?: string; stderr?: string }) => {
+    if (!result) return;
+    const logText = (label: string, value?: string) => {
+      if (!value) return;
+      value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => appendLog(`${label}: ${line}`));
+    };
+    logText("stdout", result.stdout);
+    logText("stderr", result.stderr);
   };
 
   const loadDevices = async () => {
@@ -63,17 +78,18 @@ export const BluetoothSetup = () => {
   };
 
   const runAction = async (
-    action: (macAddress: string) => Promise<any>,
+    action: (macAddress: string) => Promise<BluetoothCommandResult>,
     successMessage: (macAddress: string) => string,
     target?: string
   ) => {
     const macAddress = resolveMac(target);
     if (!macAddress) return;
     try {
-      await action(macAddress);
+      const result = await action(macAddress);
       const message = successMessage(macAddress);
       toast.success(message);
       appendLog(message);
+      logCommandResult(result);
     } catch (err: any) {
       const detail = err?.response?.data?.detail || "Aktion fehlgeschlagen";
       toast.error(detail);
@@ -91,6 +107,7 @@ export const BluetoothSetup = () => {
       const message = `PBAP Sync fuer ${macAddress} (${bytes} Bytes)`;
       toast.success(message);
       appendLog(`${message} -> ${path}`);
+      logCommandResult(result);
     } catch (err: any) {
       const detail = err?.response?.data?.detail || "PBAP Sync fehlgeschlagen";
       toast.error(detail);

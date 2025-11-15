@@ -11,6 +11,12 @@ import {
   SourceType,
 } from "./types";
 
+export interface BluetoothCommandResult {
+  stdout?: string;
+  stderr?: string;
+  returncode?: number;
+}
+
 const runtimeBase =
   typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_API_PORT || "8000"}`
@@ -82,19 +88,19 @@ export async function scanBluetooth(timeout = 8) {
   return data.devices as { mac: string; name: string }[];
 }
 
-export async function pairBluetooth(mac: string) {
+export async function pairBluetooth(mac: string): Promise<BluetoothCommandResult> {
   const { data } = await client.post("/bluetooth/pair", { mac });
-  return data;
+  return data as BluetoothCommandResult;
 }
 
-export async function connectBluetooth(mac: string) {
+export async function connectBluetooth(mac: string): Promise<BluetoothCommandResult> {
   const { data } = await client.post("/bluetooth/connect", { mac });
-  return data;
+  return data as BluetoothCommandResult;
 }
 
-export async function disconnectBluetooth(mac: string) {
+export async function disconnectBluetooth(mac: string): Promise<BluetoothCommandResult> {
   const { data } = await client.post("/bluetooth/disconnect", { mac });
-  return data;
+  return data as BluetoothCommandResult;
 }
 
 export async function triggerPbap(mac: string) {

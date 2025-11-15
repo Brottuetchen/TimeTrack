@@ -9,6 +9,13 @@ class BluetoothError(Exception):
     pass
 
 
+def _raise_on_error(code: int, stdout: str, stderr: str, fallback: str) -> None:
+    if code == 0:
+        return
+    detail = stderr.strip() or stdout.strip() or fallback
+    raise BluetoothError(detail)
+
+
 def _run(command: List[str], input_data: str | None = None, timeout: int = 30) -> Tuple[int, str, str]:
     try:
         result = subprocess.run(
@@ -27,11 +34,12 @@ def _run(command: List[str], input_data: str | None = None, timeout: int = 30) -
 
 
 def run_bluetoothctl_script(commands: List[str], timeout: int = 30) -> Tuple[int, str, str]:
-    script = "\n".join(commands + ["quit\n"])
+    script = "\n".join(commands + ["quit"])
     return _run(["bluetoothctl"], input_data=script, timeout=timeout)
 
 
 def scan_devices(timeout: int = 8) -> List[dict]:
+    run_bluetoothctl_script(["power on"], timeout=5)
     _run(["bluetoothctl", "--timeout", str(timeout), "scan", "on"], timeout=timeout + 2)
     code, stdout, stderr = _run(["bluetoothctl", "devices"], timeout=10)
     if code != 0:
@@ -62,31 +70,41 @@ def list_devices() -> List[dict]:
     return devices
 
 
-def pair_device(mac: str) -> Tuple[str, str]:
+def pair_device(mac: str) -> Tuple[int, str, str]:
     script = textwrap.dedent(
         f"""
+        power on
+        agent on
+        default-agent
+        pairable on
+        discoverable on
         pair {mac}
         trust {mac}
         """
     )
-    code, stdout, stderr = run_bluetoothctl_script(script.strip().splitlines())
-    if code != 0:
-        raise BluetoothError(stderr.strip() or "Pairing fehlgeschlagen")
-    return stdout, stderr
+    code, stdout, stderr = run_bluetoothctl_script(script.strip().splitlines(), timeout=75)
+    _raise_on_error(code, stdout, stderr, "Pairing fehlgeschlagen")
+    return code, stdout, stderr
 
 
-def connect_device(mac: str) -> Tuple[str, str]:
-    code, stdout, stderr = run_bluetoothctl_script([f"connect {mac}"])
-    if code != 0:
-        raise BluetoothError(stderr.strip() or "Connect fehlgeschlagen")
-    return stdout, stderr
+def connect_device(mac: str) -> Tuple[int, str, str]:
+    script = [
+        "power on",
+        f"connect {mac}",
+    ]
+    code, stdout, stderr = run_bluetoothctl_script(script, timeout=40)
+    _raise_on_error(code, stdout, stderr, "Connect fehlgeschlagen")
+    return code, stdout, stderr
 
 
-def disconnect_device(mac: str) -> Tuple[str, str]:
-    code, stdout, stderr = run_bluetoothctl_script([f"disconnect {mac}"])
-    if code != 0:
-        raise BluetoothError(stderr.strip() or "Disconnect fehlgeschlagen")
-    return stdout, stderr
+def disconnect_device(mac: str) -> Tuple[int, str, str]:
+    script = [
+        "power on",
+        f"disconnect {mac}",
+    ]
+    code, stdout, stderr = run_bluetoothctl_script(script, timeout=30)
+    _raise_on_error(code, stdout, stderr, "Disconnect fehlgeschlagen")
+    return code, stdout, stderr
 
 
 def pbap_sync(mac: str) -> dict:

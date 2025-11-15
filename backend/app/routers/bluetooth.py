@@ -39,8 +39,8 @@ def scan(timeout: int = Query(8, ge=3, le=30)):
 @router.post("/pair")
 def pair(payload: MacPayload):
     try:
-        stdout, stderr = pair_device(payload.mac)
-        return {"stdout": stdout, "stderr": stderr}
+        code, stdout, stderr = pair_device(payload.mac)
+        return {"returncode": code, "stdout": stdout, "stderr": stderr}
     except BluetoothError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -48,8 +48,8 @@ def pair(payload: MacPayload):
 @router.post("/connect")
 def connect(payload: MacPayload):
     try:
-        stdout, stderr = connect_device(payload.mac)
-        return {"stdout": stdout, "stderr": stderr}
+        code, stdout, stderr = connect_device(payload.mac)
+        return {"returncode": code, "stdout": stdout, "stderr": stderr}
     except BluetoothError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -57,8 +57,8 @@ def connect(payload: MacPayload):
 @router.post("/disconnect")
 def disconnect(payload: MacPayload):
     try:
-        stdout, stderr = disconnect_device(payload.mac)
-        return {"stdout": stdout, "stderr": stderr}
+        code, stdout, stderr = disconnect_device(payload.mac)
+        return {"returncode": code, "stdout": stdout, "stderr": stderr}
     except BluetoothError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
