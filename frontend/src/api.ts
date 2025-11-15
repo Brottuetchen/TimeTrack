@@ -103,6 +103,11 @@ export async function disconnectBluetooth(mac: string): Promise<BluetoothCommand
   return data as BluetoothCommandResult;
 }
 
+export async function removeBluetooth(mac: string): Promise<BluetoothCommandResult> {
+  const { data } = await client.post("/bluetooth/remove", { mac });
+  return data as BluetoothCommandResult;
+}
+
 export async function triggerPbap(mac: string) {
   const { data } = await client.post("/bluetooth/pbap", { mac });
   return data;

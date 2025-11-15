@@ -5,6 +5,7 @@ import {
   disconnectBluetooth,
   listBluetoothDevices,
   pairBluetooth,
+  removeBluetooth,
   scanBluetooth,
   triggerPbap,
 } from "../api";
@@ -80,7 +81,8 @@ export const BluetoothSetup = () => {
   const runAction = async (
     action: (macAddress: string) => Promise<BluetoothCommandResult>,
     successMessage: (macAddress: string) => string,
-    target?: string
+    target?: string,
+    postAction?: () => Promise<void> | void
   ) => {
     const macAddress = resolveMac(target);
     if (!macAddress) return;
@@ -90,6 +92,9 @@ export const BluetoothSetup = () => {
       toast.success(message);
       appendLog(message);
       logCommandResult(result);
+      if (postAction) {
+        await postAction();
+      }
     } catch (err: any) {
       const detail = err?.response?.data?.detail || "Aktion fehlgeschlagen";
       toast.error(detail);
@@ -190,6 +195,20 @@ export const BluetoothSetup = () => {
                   >
                     Disconnect
                   </button>
+                  <button
+                    className="text-xs text-amber-600 hover:underline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      runAction(
+                        removeBluetooth,
+                        (value) => `Geraet entfernt (${value})`,
+                        device.mac,
+                        loadDevices
+                      );
+                    }}
+                  >
+                    Remove
+                  </button>
                 </td>
               </tr>
             ))}
@@ -222,6 +241,12 @@ export const BluetoothSetup = () => {
           className="rounded border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
         >
           Trennen
+        </button>
+        <button
+          onClick={() => runAction(removeBluetooth, (value) => `Geraet entfernt (${value})`, undefined, loadDevices)}
+          className="rounded border border-amber-500 text-amber-700 dark:text-amber-300 px-4 py-2 text-sm hover:bg-amber-50 dark:hover:bg-amber-900/40"
+        >
+          Verbindung entfernen
         </button>
         <button
           onClick={handlePbap}

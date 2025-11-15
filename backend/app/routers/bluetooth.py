@@ -8,6 +8,7 @@ from ..bluetooth import (
     list_devices,
     pair_device,
     pbap_sync,
+    remove_device,
     scan_devices,
 )
 
@@ -58,6 +59,15 @@ def connect(payload: MacPayload):
 def disconnect(payload: MacPayload):
     try:
         code, stdout, stderr = disconnect_device(payload.mac)
+        return {"returncode": code, "stdout": stdout, "stderr": stderr}
+    except BluetoothError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/remove")
+def remove(payload: MacPayload):
+    try:
+        code, stdout, stderr = remove_device(payload.mac)
         return {"returncode": code, "stdout": stdout, "stderr": stderr}
     except BluetoothError as exc:
         raise HTTPException(status_code=500, detail=str(exc))

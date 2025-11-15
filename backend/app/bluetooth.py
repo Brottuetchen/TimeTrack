@@ -119,6 +119,16 @@ def disconnect_device(mac: str) -> Tuple[int, str, str]:
     return code, stdout, stderr
 
 
+def remove_device(mac: str) -> Tuple[int, str, str]:
+    script = [
+        "power on",
+        f"remove {mac}",
+    ]
+    code, stdout, stderr = run_bluetoothctl_script(script, timeout=30)
+    _raise_on_error(code, stdout, stderr, "Remove fehlgeschlagen")
+    return code, stdout, stderr
+
+
 def pbap_sync(mac: str) -> dict:
     tmp = Path(tempfile.gettempdir()) / "timetrack_pbap.vcf"
     script = textwrap.dedent(
