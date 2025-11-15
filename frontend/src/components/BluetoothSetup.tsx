@@ -58,9 +58,11 @@ export const BluetoothSetup = () => {
   const handleScan = async () => {
     setLoading(true);
     try {
-      const list = await scanBluetooth();
-      setDevices(list);
-      appendLog(`Scan abgeschlossen (${list.length} Geraete)`);
+      const response = await scanBluetooth();
+      setDevices(response.devices);
+      appendLog(`Scan abgeschlossen (${response.devices.length} Geraete)`);
+      logCommandResult({ stdout: response.scan_stdout, stderr: response.scan_stderr });
+      logCommandResult({ stdout: response.devices_stdout });
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Scan fehlgeschlagen");
       appendLog("Scan fehlgeschlagen");

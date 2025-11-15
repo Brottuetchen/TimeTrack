@@ -68,7 +68,7 @@ def run_bluetoothctl_script(commands: List[str], timeout: int = 30) -> Tuple[int
     return _run(["bluetoothctl"], input_data=script, timeout=timeout)
 
 
-def scan_devices(timeout: int = 8) -> List[dict]:
+def scan_devices(timeout: int = 8) -> dict:
     run_bluetoothctl_script(["power on", "agent on", "default-agent"], timeout=10)
     code, scan_stdout, scan_stderr = _run(["bluetoothctl", "--timeout", str(timeout), "scan", "on"], timeout=timeout + 3)
     if code != 0:
@@ -79,11 +79,18 @@ def scan_devices(timeout: int = 8) -> List[dict]:
         devices[dev["mac"]] = dev
 
     code, stdout, stderr = _run(["bluetoothctl", "devices"], timeout=10)
+    devices_listing = ""
     if code == 0:
+        devices_listing = stdout
         for dev in _parse_device_lines(stdout, stderr):
             devices.setdefault(dev["mac"], dev)
 
-    return list(devices.values())
+    return {
+        "devices": list(devices.values()),
+        "scan_stdout": scan_stdout,
+        "scan_stderr": scan_stderr,
+        "devices_stdout": devices_listing,
+    }
 
 
 def list_devices() -> List[dict]:
@@ -153,4 +160,5 @@ def pbap_sync(mac: str) -> dict:
         raise BluetoothError(stderr.strip() or stdout.strip() or "PBAP Sync fehlgeschlagen")
     size = tmp.stat().st_size if tmp.exists() else 0
     return {"path": str(tmp), "bytes": size, "stdout": stdout, "stderr": stderr}
+
 

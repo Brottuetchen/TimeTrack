@@ -85,7 +85,12 @@ export async function listBluetoothDevices() {
 
 export async function scanBluetooth(timeout = 8) {
   const { data } = await client.post("/bluetooth/scan", undefined, { params: { timeout } });
-  return data.devices as { mac: string; name: string }[];
+  return data as {
+    devices: { mac: string; name: string }[];
+    scan_stdout?: string;
+    scan_stderr?: string;
+    devices_stdout?: string;
+  };
 }
 
 export async function pairBluetooth(mac: string): Promise<BluetoothCommandResult> {

@@ -31,8 +31,8 @@ def devices():
 @router.post("/scan")
 def scan(timeout: int = Query(8, ge=3, le=30)):
     try:
-        devices = scan_devices(timeout)
-        return {"devices": devices}
+        result = scan_devices(timeout)
+        return result
     except BluetoothError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
