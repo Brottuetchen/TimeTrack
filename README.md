@@ -114,3 +114,5 @@ Schritt-für-Schritt-Anleitung: `docs/offline_usb_setup.md`. Kurzfassung:
 Alles bleibt lokal/offline, bis du CSV exportierst und manuell importierst.
 
 - Privacy/Filter-Karte im UI verwaltet Whitelist/Blacklist sowie den Privacy-Modus (Logging 15/30 Minuten oder unbegrenzt pausieren). Der Windows-Agent pollt `/settings/logging` und respektiert diese Vorgaben automatisch.
+- **Filter-Priorität:** Remote-Filter aus dem Web-UI haben **immer Vorrang** vor lokalen Filtern aus `config.json`. Wenn eine Remote-Whitelist gesetzt ist, werden lokale `include_processes` ignoriert. Details siehe `windows_agent/README.md`.
+- **Agent-Config Download:** `GET /settings/agent-config` liefert eine fertige `config.json` mit den aktuellen Remote-Filtern zum Download.

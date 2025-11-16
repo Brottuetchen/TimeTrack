@@ -133,3 +133,54 @@ def delete_logo():
     settings["logo_svg"] = None
     save_settings(settings)
     return {"logo_svg": None}
+
+
+@router.get("/agent-config")
+def get_agent_config():
+    """
+    Gibt eine komplette Agent-Konfiguration im config.json-Format zurück.
+    Merged Remote-Settings (whitelist/blacklist) mit Default-Config.
+
+    Diese Config kann vom User heruntergeladen und als config.json im Agent-Verzeichnis gespeichert werden.
+    """
+    settings = load_settings()
+
+    # Remote-Filter aus Settings holen
+    remote_whitelist = settings.get("whitelist", [])
+    remote_blacklist = settings.get("blacklist", [])
+
+    # Standard-Config mit Remote-Filtern
+    agent_config = {
+        "base_url": "http://localhost:8000",
+        "machine_id": "auto-detect",  # Agent generiert automatisch eine machine_id beim Start
+        "user_id": "BITTE_EINTRAGEN",  # User muss dies anpassen
+        "poll_interval_ms": 1500,
+        "send_batch_seconds": 30,
+        "include_processes": [],  # Leer, wenn Remote-Whitelist verwendet wird
+        "exclude_processes": remote_blacklist,  # Remote-Blacklist übernehmen
+        "include_title_keywords": [],
+        "exclude_title_keywords": [],
+        "buffer_file": "%APPDATA%\\TimeTrack\\buffer.json",
+        "log_file": "%APPDATA%\\TimeTrack\\timetrack_agent.log",
+        "verify_ssl": False,
+        "api_key": None,
+        "settings_poll_seconds": 60,
+        # Call Sync Settings
+        "call_sync_enabled": False,
+        "call_sync_interval_minutes": 15,
+        "teams_enabled": False,
+        "teams_tenant_id": settings.get("teams_tenant_id"),
+        "teams_client_id": settings.get("teams_client_id"),
+        "teams_client_secret": settings.get("teams_client_secret"),
+        "placetel_enabled": False,
+        "placetel_api_key": None,
+        "placetel_api_url": "https://api.placetel.de/v2",
+        # Info-Felder (nicht von Agent verwendet, nur zur Info)
+        "_info": {
+            "remote_whitelist": remote_whitelist,
+            "remote_blacklist": remote_blacklist,
+            "note": "Remote filters from Web-UI have priority over local filters. include_processes is empty because remote whitelist is managed via Web-UI."
+        }
+    }
+
+    return agent_config

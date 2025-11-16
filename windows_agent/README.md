@@ -51,6 +51,86 @@ Resultat: `dist\TimeTrackTray.exe`. Diese Datei zusammen mit `config.json` auf d
 
 Das Icon zeigt grün (aktiv) bzw. orange (pausiert); Tooltip aktualisiert sich automatisch. Verpackt mit `pyinstaller --windowed` läuft das Tool vollständig im Tray.
 
+## Filter-Verwaltung und Priorität
+
+Der Agent unterstützt zwei Arten von Filtern: **Remote-Filter** (aus dem Web-UI) und **lokale Filter** (aus `config.json`).
+
+### Filter-Priorität (wichtig!)
+
+**Remote-Filter haben IMMER Vorrang vor lokalen Filtern:**
+
+1. **Whitelist-Logik:**
+   - Wenn eine **Remote-Whitelist** (Web-UI → Privacy Settings) gesetzt ist, werden **NUR** diese Prozesse getrackt
+   - Lokale `include_processes` aus `config.json` werden in diesem Fall **IGNORIERT**
+   - Wenn die Remote-Whitelist **leer** ist, wird auf lokale `include_processes` zurückgegriffen
+   - Wenn **beide leer** sind, werden **alle** Prozesse getrackt (außer Blacklist)
+
+2. **Blacklist-Logik:**
+   - Remote-Blacklist (Web-UI) und lokale `exclude_processes` werden **kombiniert**
+   - Ein Prozess wird blockiert, wenn er in **einer** der beiden Blacklists steht
+
+### Empfohlene Nutzung
+
+**✅ Empfohlen:** Filter im **Web-UI verwalten** (Privacy Settings)
+- Zentrale Verwaltung über das Web-UI
+- Änderungen werden automatisch vom Agent abgerufen (alle 60 Sekunden)
+- Keine manuelle Bearbeitung von `config.json` nötig
+
+**⚠️ Legacy:** Filter in `config.json` (nur für Offline-Betrieb)
+- Nur als Fallback, wenn keine API-Verbindung besteht
+- `include_processes` wird ignoriert, sobald Remote-Whitelist gesetzt ist
+- `exclude_processes` wird mit Remote-Blacklist kombiniert
+
+### Beispiele
+
+**Szenario 1: Remote-Whitelist LEER (Standard)**
+```
+Remote-Whitelist: []
+Lokale include_processes: ["excel.exe"]
+→ Agent trackt ALLES (lokale Whitelist wird IGNORIERT)
+```
+
+**Szenario 2: Remote-Whitelist gesetzt**
+```
+Remote-Whitelist: ["chrome.exe", "acad.exe"]
+Lokale include_processes: ["excel.exe"]
+→ Agent trackt NUR chrome.exe und acad.exe (lokale Whitelist wird IGNORIERT)
+```
+
+**Szenario 3: Blacklist kombiniert**
+```
+Remote-Blacklist: ["game.exe"]
+Lokale exclude_processes: ["spotify.exe"]
+→ Agent trackt ALLES außer game.exe UND spotify.exe
+```
+
+**Szenario 4: Offline-Betrieb (keine API-Verbindung)**
+```
+Remote-Whitelist: [] (leer, weil keine Verbindung)
+Lokale include_processes: ["excel.exe", "word.exe"]
+→ Agent trackt NUR excel.exe und word.exe (Fallback auf lokale Config)
+```
+
+### Logging und Debugging
+
+Der Agent loggt beim Start, welche Filter aktiv sind:
+
+```
+ACTIVE FILTER: Remote whitelist (Web-UI) → ['chrome.exe', 'acad.exe']
+ACTIVE FILTER: Local include_processes will be IGNORED (remote whitelist has priority)
+ACTIVE FILTER: Remote blacklist (Web-UI) → ['game.exe']
+ACTIVE FILTER: Local blacklist (config.json) → ['spotify.exe']
+```
+
+Bei jedem gefilterten Prozess wird im Log (Debug-Level) angegeben, warum er gefiltert wurde:
+- "Filtered by remote whitelist: firefox.exe not in ['chrome.exe', 'acad.exe']"
+- "Filtered by local whitelist: notepad.exe not in ['excel.exe']"
+- "Filtered by remote blacklist: game.exe"
+
+### Agent-Config herunterladen (optional)
+
+Das Web-UI bietet einen Endpoint `GET /settings/agent-config`, der eine fertige `config.json` mit den aktuellen Remote-Filtern generiert. Diese kann heruntergeladen und als Basis für die lokale Config verwendet werden.
+
 ## Start auf Firmenrechner
 
 1. `config.json` mit Firmen-spezifischen Werten (User-ID, Projekt-Filter) befüllen.

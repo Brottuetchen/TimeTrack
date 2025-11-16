@@ -232,6 +232,30 @@ class WindowTracker(threading.Thread):
 
     def run(self):
         self.logger.info("WindowTracker gestartet (%.2fs Poll)", self.poll_interval)
+
+        # Log active filters at startup
+        remote_whitelist = self.settings_manager.whitelist()
+        remote_blacklist = self.settings_manager.blacklist()
+
+        if remote_whitelist:
+            self.logger.info("ACTIVE FILTER: Remote whitelist (Web-UI) → %s", remote_whitelist)
+            if self.cfg.include_processes:
+                self.logger.warning("Local include_processes will be IGNORED (remote whitelist has priority)")
+        elif self.cfg.include_processes:
+            self.logger.info("ACTIVE FILTER: Local whitelist (config.json) → %s", self.cfg.include_processes)
+        else:
+            self.logger.info("ACTIVE FILTER: No whitelist (tracking all processes)")
+
+        if remote_blacklist:
+            self.logger.info("ACTIVE FILTER: Remote blacklist (Web-UI) → %s", remote_blacklist)
+        if self.cfg.exclude_processes:
+            self.logger.info("ACTIVE FILTER: Local blacklist (config.json) → %s", self.cfg.exclude_processes)
+
+        if self.cfg.include_title_keywords:
+            self.logger.info("ACTIVE FILTER: Title include keywords → %s", self.cfg.include_title_keywords)
+        if self.cfg.exclude_title_keywords:
+            self.logger.info("ACTIVE FILTER: Title exclude keywords → %s", self.cfg.exclude_title_keywords)
+
         while not self._stop_event.is_set():
             try:
                 info = self._active_window()
@@ -312,20 +336,40 @@ class WindowTracker(threading.Thread):
     def _should_track(self, info: Dict) -> bool:
         proc = info["process"]
         title = info["title"].lower()
+
+        # Fetch remote filters
         remote_whitelist = self.settings_manager.whitelist()
         remote_blacklist = self.settings_manager.blacklist()
-        if remote_whitelist and proc not in remote_whitelist:
-            return False
+
+        # WHITELIST LOGIC: Remote has priority over local
+        if remote_whitelist:
+            # Remote whitelist is active → only track these processes
+            if proc not in remote_whitelist:
+                self.logger.debug("Filtered by remote whitelist: %s not in %s", proc, remote_whitelist)
+                return False
+        elif self.cfg.include_processes:
+            # Fallback to local whitelist when no remote whitelist
+            if proc not in self.cfg.include_processes:
+                self.logger.debug("Filtered by local whitelist: %s not in %s", proc, self.cfg.include_processes)
+                return False
+
+        # BLACKLIST LOGIC: Check both remote AND local
         if proc in remote_blacklist:
-            return False
-        if self.cfg.include_processes and proc not in self.cfg.include_processes:
+            self.logger.debug("Filtered by remote blacklist: %s", proc)
             return False
         if proc in self.cfg.exclude_processes:
+            self.logger.debug("Filtered by local blacklist: %s", proc)
             return False
-        if self.cfg.include_title_keywords and not any(keyword in title for keyword in self.cfg.include_title_keywords):
-            return False
+
+        # TITLE KEYWORDS (only local, Web-UI doesn't support this)
+        if self.cfg.include_title_keywords:
+            if not any(keyword in title for keyword in self.cfg.include_title_keywords):
+                self.logger.debug("Filtered by title keywords (include): %s", title)
+                return False
         if any(keyword in title for keyword in self.cfg.exclude_title_keywords):
+            self.logger.debug("Filtered by title keywords (exclude): %s", title)
             return False
+
         return True
 
 
