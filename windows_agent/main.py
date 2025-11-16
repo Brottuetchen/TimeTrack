@@ -22,7 +22,34 @@ from pystray import MenuItem
 
 from call_sync import CallSyncManager
 
-CONFIG_PATH = Path(__file__).with_name("config.json")
+# Config-Editor wird bei Bedarf importiert (optional für Standalone-Betrieb)
+try:
+    from config_editor import ConfigEditorDialog
+    from PyQt6.QtWidgets import QApplication
+    CONFIG_EDITOR_AVAILABLE = True
+except ImportError:
+    CONFIG_EDITOR_AVAILABLE = False
+
+# Config-Pfad: Erst im Script-Verzeichnis suchen, sonst in APPDATA
+def get_config_path() -> Path:
+    """Ermittelt den Config-Pfad (Script-Verzeichnis oder APPDATA)"""
+    # Bei EXE-Build ist __file__ im temp-Verzeichnis, daher APPDATA bevorzugen
+    if getattr(sys, 'frozen', False):
+        # Läuft als EXE
+        appdata = Path(os.path.expandvars('%APPDATA%')) / 'TimeTrack'
+        appdata.mkdir(parents=True, exist_ok=True)
+        return appdata / 'config.json'
+    else:
+        # Läuft als Script - erst lokales Verzeichnis prüfen
+        local_config = Path(__file__).with_name("config.json")
+        if local_config.exists():
+            return local_config
+        # Sonst APPDATA verwenden
+        appdata = Path(os.path.expandvars('%APPDATA%')) / 'TimeTrack'
+        appdata.mkdir(parents=True, exist_ok=True)
+        return appdata / 'config.json'
+
+CONFIG_PATH = get_config_path()
 
 
 def expand_path(value: str) -> str:
@@ -61,6 +88,38 @@ def open_path(path: Path):
         logging.getLogger("timetrack_agent").warning("Konnte %s nicht öffnen: %s", path, exc)
 
 
+def create_default_config() -> dict:
+    """Erstellt eine Default-Konfiguration"""
+    import socket
+    hostname = socket.gethostname()
+
+    return {
+        "base_url": "http://localhost:8000",
+        "user_id": "BITTE_EINTRAGEN",
+        "machine_id": hostname,
+        "poll_interval_ms": 1500,
+        "send_batch_seconds": 30,
+        "settings_poll_seconds": 60,
+        "include_processes": [],
+        "exclude_processes": [],
+        "include_title_keywords": [],
+        "exclude_title_keywords": [],
+        "buffer_file": "%APPDATA%\\TimeTrack\\buffer.json",
+        "log_file": "%APPDATA%\\TimeTrack\\agent.log",
+        "verify_ssl": False,
+        "api_key": None,
+        "call_sync_enabled": False,
+        "call_sync_interval_minutes": 15,
+        "teams_enabled": False,
+        "teams_tenant_id": None,
+        "teams_client_id": None,
+        "teams_client_secret": None,
+        "placetel_enabled": False,
+        "placetel_api_key": None,
+        "placetel_api_url": "https://api.placetel.de/v2"
+    }
+
+
 @dataclass
 class Config:
     base_url: str
@@ -97,7 +156,14 @@ class Config:
     @classmethod
     def load(cls) -> "Config":
         if not CONFIG_PATH.exists():
-            raise FileNotFoundError(f"config.json fehlt unter {CONFIG_PATH}")
+            # Erstelle Default-Config
+            default_config = create_default_config()
+            CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(default_config, f, indent=2, ensure_ascii=False)
+            print(f"Default-Konfiguration erstellt: {CONFIG_PATH}")
+            print("Bitte öffne die Config über das Tray-Menü und passe sie an!")
+
         raw = json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
         raw["buffer_file"] = expand_path(raw.get("buffer_file", "buffer.json"))
         raw["log_file"] = expand_path(raw.get("log_file", "timetrack_agent.log"))
@@ -455,8 +521,13 @@ class TrayController:
         if call_sync_manager:
             menu_items.append(MenuItem("Call-Sync jetzt ausführen", self.trigger_call_sync))
 
+        # Config-Editor oder öffnen
+        if CONFIG_EDITOR_AVAILABLE:
+            menu_items.append(MenuItem("Einstellungen bearbeiten", self.edit_config))
+        else:
+            menu_items.append(MenuItem("Config öffnen", self.open_config))
+
         menu_items.extend([
-            MenuItem("Config öffnen", self.open_config),
             MenuItem("Logdatei öffnen", self.open_log),
             MenuItem("Beenden", self.quit),
         ])
@@ -503,6 +574,30 @@ class TrayController:
 
     def show_status(self, *_):
         self._show_message(self.status_text(), "TimeTrack Status")
+
+    def edit_config(self, *_):
+        """Öffnet den Config-Editor Dialog"""
+        if not CONFIG_EDITOR_AVAILABLE:
+            self.open_config()
+            return
+
+        try:
+            # PyQt6 Application erstellen falls nötig
+            app = QApplication.instance()
+            if app is None:
+                app = QApplication(sys.argv)
+
+            # Config-Editor Dialog öffnen
+            dialog = ConfigEditorDialog(CONFIG_PATH)
+            dialog.exec()
+
+            self.logger.info("Config-Editor geschlossen")
+        except Exception as exc:
+            self.logger.exception("Fehler beim Öffnen des Config-Editors: %s", exc)
+            self._show_message(
+                f"Config-Editor konnte nicht geöffnet werden:\n{exc}",
+                "Fehler"
+            )
 
     def open_config(self, *_):
         open_path(Path(CONFIG_PATH))

@@ -10,7 +10,8 @@ Diese Anleitung erklärt, wie du den TimeTrack Agent als eigenständige EXE-Date
    pip install -r requirements.txt
    pip install pyinstaller
    ```
-3. `config.json` erstellt und konfiguriert (siehe `config.example.json`)
+
+**Hinweis:** Keine manuelle Config-Erstellung mehr nötig! Die EXE erstellt automatisch eine Default-Config bei erstem Start.
 
 ## 🔨 Schritt 1: EXE erstellen
 
@@ -42,16 +43,18 @@ pyinstaller --clean timetrack_agent.spec
 
 ## 📁 Wichtige Dateien nach dem Build
 
-Nach dem erfolgreichen Build brauchst du folgende Dateien:
+Nach dem erfolgreichen Build brauchst du nur noch:
 
 ```
 windows_agent/
-├── TimeTrackAgent.exe   ← Die erstellte EXE
-├── config.json          ← WICHTIG: Muss im selben Ordner liegen!
-└── (optional) logs/
+├── TimeTrackAgent.exe   ← Die erstellte EXE (vollständig eigenständig!)
 ```
 
-**⚠️ WICHTIG:** Die `config.json` muss **immer** im selben Verzeichnis wie die EXE liegen!
+**🎉 NEU:** Die EXE ist vollständig eigenständig!
+- Config wird automatisch in `%APPDATA%\TimeTrack\config.json` erstellt
+- Config-Editor ist eingebettet - bearbeite Einstellungen direkt über das Tray-Menü!
+- Logs werden in `%APPDATA%\TimeTrack\` gespeichert
+- Kein Python oder externe Dateien nötig
 
 ## 🚀 Schritt 2: Autostart einrichten
 
@@ -103,9 +106,10 @@ powershell -ExecutionPolicy Bypass -File .\install_autostart.ps1 -Uninstall
 
 ### Erste Schritte
 
-1. Stelle sicher, dass `config.json` konfiguriert ist
-2. Starte `TimeTrackAgent.exe` per Doppelklick
-3. Ein grünes Icon erscheint im System-Tray (neben der Uhr)
+1. Starte `TimeTrackAgent.exe` per Doppelklick
+2. Ein grünes Icon erscheint im System-Tray (neben der Uhr)
+3. Beim ersten Start wird automatisch eine Default-Config in `%APPDATA%\TimeTrack\` erstellt
+4. **Rechtsklick** auf das Tray-Icon → **"Einstellungen bearbeiten"** → Konfiguration anpassen
 
 ### Tray-Menü
 
@@ -114,25 +118,37 @@ Rechtsklick auf das Icon zeigt:
 - **Offene Events senden** - Manuell senden
 - **Status anzeigen** - Statusinfos anzeigen
 - **Call-Sync jetzt ausführen** - (falls aktiviert)
-- **Config öffnen** - config.json im Editor öffnen
+- **Einstellungen bearbeiten** 🆕 - Config-Editor mit komfortablem UI öffnen
 - **Logdatei öffnen** - Log-Datei öffnen
 - **Beenden** - Anwendung beenden
 
+### Config-Editor 🆕
+
+Der eingebaute Config-Editor bietet:
+- **Basis-Einstellungen**: Backend URL, User ID, Machine ID, API Key
+- **Tracking-Einstellungen**: Polling-Intervall, Send-Intervall
+- **Filter**: Lokale Include/Exclude-Listen für Prozesse und Keywords
+- **Call-Sync**: Teams & Placetel Integration konfigurieren
+- **Validierung**: Automatische Überprüfung der Eingaben
+- **Speichern**: Änderungen werden in `%APPDATA%\TimeTrack\config.json` gespeichert
+
+**Hinweis:** White/Blacklist können auch im **Web-UI** verwaltet werden (Admin → Privacy & Filter)!
+
 ### Deployment auf anderen PCs
 
-Wenn du die EXE auf andere PCs verteilen möchtest:
+Deployment ist jetzt super einfach:
 
-1. Kopiere diese Dateien:
+1. Kopiere **nur** diese Datei:
    ```
    TimeTrackAgent.exe
-   config.json (oder config.example.json als Vorlage)
    ```
 
 2. Auf dem Ziel-PC:
    - Erstelle einen Ordner (z.B. `C:\Program Files\TimeTrack\`)
-   - Kopiere die Dateien hinein
-   - Passe `config.json` an (user_id, machine_id, etc.)
-   - Führe `install_autostart.bat` aus (oder erstelle manuell eine Verknüpfung)
+   - Kopiere die EXE hinein
+   - Starte die EXE → Config-Editor öffnet sich automatisch beim ersten Start
+   - Passe User ID, Machine ID und Backend URL an
+   - Fertig!
 
 ## 🛠️ Troubleshooting
 
@@ -142,9 +158,10 @@ Die EXE sollte alle Dependencies enthalten. Falls Probleme auftreten:
 - Prüfe ob Visual C++ Redistributable installiert ist
 - Führe die EXE in CMD aus um Fehler zu sehen: `TimeTrackAgent.exe`
 
-### "config.json nicht gefunden"
+### "Einstellungen anpassen"
 
-Die `config.json` muss im **selben Ordner** wie die EXE liegen.
+Die Config wird automatisch in `%APPDATA%\TimeTrack\config.json` gespeichert.
+Bearbeite sie bequem über: **Tray-Icon → Rechtsklick → Einstellungen bearbeiten**
 
 ### "PyInstaller import error"
 
