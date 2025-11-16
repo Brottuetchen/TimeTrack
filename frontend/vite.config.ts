@@ -11,6 +11,28 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
+      // Performance optimizations for Raspberry Pi deployment
+      rollupOptions: {
+        output: {
+          // Split vendor code from app code for better caching
+          manualChunks: {
+            vendor: ["react", "react-dom"],
+            ui: ["dayjs", "clsx"],
+            network: ["axios"],
+          },
+        },
+      },
+      // Optimize chunk size
+      chunkSizeWarningLimit: 1000,
+      // Use terser for better compression
+      minify: "terser",
+      terserOptions: {
+        compress: {
+          drop_console: mode === "production", // Remove console.logs in production
+        },
+      },
+      // Source maps only in development
+      sourcemap: mode === "development",
     },
   };
 });

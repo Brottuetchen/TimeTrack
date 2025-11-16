@@ -2,8 +2,10 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "timetrack.db"
@@ -11,8 +13,32 @@ DB_PATH = Path(os.getenv("TIMETRACK_DB_PATH", DEFAULT_DB_PATH))
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,  # SQLite-optimized connection pooling
+    echo=False,  # Disable SQL logging in production for performance
 )
+
+
+# Configure SQLite for optimal performance on Raspberry Pi
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_conn, connection_record):
+    """
+    Sets SQLite pragmas for better performance:
+    - WAL mode: Better concurrency (multiple readers + 1 writer)
+    - NORMAL synchronous: Faster writes (safe for Pi with stable power)
+    - Larger cache: 10MB cache in memory
+    - Memory temp store: Faster temp operations
+    """
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA cache_size=-10000")  # 10MB cache (negative = KB)
+    cursor.execute("PRAGMA temp_store=MEMORY")
+    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
+    cursor.close()
+
+
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )

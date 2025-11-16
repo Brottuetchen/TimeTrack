@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text, JSON, Index
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -32,10 +32,17 @@ class CallSource(str, enum.Enum):
 class Event(Base):
     __tablename__ = "events"
 
+    # Composite indexes for performance (frequent queries)
+    __table_args__ = (
+        Index('idx_event_user_time', 'user_id', 'timestamp_start'),
+        Index('idx_event_source_time', 'source_type', 'timestamp_start'),
+        Index('idx_event_user_source', 'user_id', 'source_type'),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
-    source_type = Column(Enum(SourceType), nullable=False)
-    timestamp_start = Column(DateTime, nullable=False, default=datetime.utcnow)
-    timestamp_end = Column(DateTime, nullable=True)
+    source_type = Column(Enum(SourceType), nullable=False, index=True)
+    timestamp_start = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    timestamp_end = Column(DateTime, nullable=True, index=True)
     duration_seconds = Column(Integer, nullable=True)
     is_private = Column(Boolean, nullable=False, default=False)
 
@@ -48,7 +55,7 @@ class Event(Base):
 
     machine_id = Column(String(64), nullable=True)
     device_id = Column(String(64), nullable=True)
-    user_id = Column(String(64), nullable=True)
+    user_id = Column(String(64), nullable=True, index=True)
 
     assignments = relationship("Assignment", back_populates="event", uselist=True)
 
@@ -69,7 +76,7 @@ class Milestone(Base):
     __tablename__ = "milestones"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
     name = Column(String(128), nullable=False)
     soll_stunden = Column(Float, nullable=True)
     ist_stunden = Column(Float, nullable=True)
@@ -83,9 +90,9 @@ class Assignment(Base):
     __tablename__ = "assignments"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, unique=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, unique=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True, index=True)
     activity_type = Column(String(64), nullable=True)
     comment = Column(Text, nullable=True)
 
