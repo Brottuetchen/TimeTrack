@@ -72,3 +72,60 @@ export interface LoggingSettings {
   privacy_mode_until: string | null;
   server_time: string;
 }
+
+export interface Session {
+  id: number;
+  user_id: string;
+  process_name: string;
+  window_title_base?: string;
+  start_time: string;
+  end_time: string;
+  total_duration_seconds: number;
+  active_duration_seconds: number;
+  event_count: number;
+  break_count: number;
+  event_ids: number[];
+  is_private: boolean;
+  assignment_id?: number;
+  assignment?: Assignment;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionAssignmentPayload {
+  project_id: number;
+  milestone_id?: number;
+  activity_type?: string;
+  comment?: string;
+}
+
+export interface AssignmentRule {
+  id: number;
+  user_id: string;
+  name: string;
+  process_pattern?: string;
+  title_contains?: string;
+  title_regex?: string;
+  auto_project_id?: number;
+  auto_milestone_id?: number;
+  auto_activity?: string;
+  auto_comment_template?: string;
+  priority: number;
+  enabled: boolean;
+  created_at: string;
+  project?: Project;
+  milestone?: Milestone;
+}
+
+export interface AssignmentRulePayload {
+  user_id: string;
+  name: string;
+  process_pattern?: string;
+  title_contains?: string;
+  title_regex?: string;
+  auto_project_id?: number;
+  auto_milestone_id?: number;
+  auto_activity?: string;
+  auto_comment_template?: string;
+  priority?: number;
+}

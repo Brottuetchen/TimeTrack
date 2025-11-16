@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
 from .bluetooth_agent import start_agent
-from .routers import assignments, bluetooth, calls, events, export, imports, milestones, projects, settings
+from .routers import assignments, bluetooth, calls, events, export, imports, milestones, projects, sessions, rules, settings
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("timetrack-main")
@@ -28,6 +28,8 @@ app.include_router(events.router)
 app.include_router(projects.router)
 app.include_router(milestones.router)
 app.include_router(assignments.router)
+app.include_router(sessions.router)
+app.include_router(rules.router)
 app.include_router(export.router)
 app.include_router(settings.router)
 app.include_router(bluetooth.router)

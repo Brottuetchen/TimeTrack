@@ -147,3 +147,83 @@ class CallLogRead(CallLogBase):
 
     class Config:
         orm_mode = True
+
+
+class SessionBase(BaseModel):
+    """Base schema for Session."""
+    user_id: str
+    process_name: str
+    window_title_base: Optional[str] = None
+    start_time: datetime
+    end_time: datetime
+    total_duration_seconds: int
+    active_duration_seconds: int
+    event_count: int = 0
+    break_count: int = 0
+    event_ids: List[int]
+    is_private: bool = False
+
+
+class SessionRead(SessionBase):
+    """Schema for reading Session entries."""
+    id: int
+    assignment_id: Optional[int] = None
+    assignment: Optional[AssignmentRead] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class SessionAssignmentCreate(BaseModel):
+    """Schema for assigning a session to a project."""
+    project_id: int
+    milestone_id: Optional[int] = None
+    activity_type: Optional[str] = None
+    comment: Optional[str] = None
+
+
+class AssignmentRuleBase(BaseModel):
+    """Base schema for AssignmentRule."""
+    name: str
+    process_pattern: Optional[str] = None
+    title_contains: Optional[str] = None
+    title_regex: Optional[str] = None
+    auto_project_id: Optional[int] = None
+    auto_milestone_id: Optional[int] = None
+    auto_activity: Optional[str] = None
+    auto_comment_template: Optional[str] = None
+    priority: int = 0
+
+
+class AssignmentRuleCreate(AssignmentRuleBase):
+    """Schema for creating an AssignmentRule."""
+    user_id: str
+
+
+class AssignmentRuleUpdate(BaseModel):
+    """Schema for updating an AssignmentRule."""
+    name: Optional[str] = None
+    process_pattern: Optional[str] = None
+    title_contains: Optional[str] = None
+    title_regex: Optional[str] = None
+    auto_project_id: Optional[int] = None
+    auto_milestone_id: Optional[int] = None
+    auto_activity: Optional[str] = None
+    auto_comment_template: Optional[str] = None
+    priority: Optional[int] = None
+    enabled: Optional[bool] = None
+
+
+class AssignmentRuleRead(AssignmentRuleBase):
+    """Schema for reading AssignmentRule entries."""
+    id: int
+    user_id: str
+    enabled: bool
+    created_at: datetime
+    project: Optional[ProjectRead] = None
+    milestone: Optional[MilestoneRead] = None
+
+    class Config:
+        orm_mode = True

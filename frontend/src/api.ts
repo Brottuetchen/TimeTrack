@@ -3,11 +3,15 @@ import dayjs from "dayjs";
 import {
   Assignment,
   AssignmentPayload,
+  AssignmentRule,
+  AssignmentRulePayload,
   Event,
   Filters,
   LoggingSettings,
   Milestone,
   Project,
+  Session,
+  SessionAssignmentPayload,
   SourceType,
 } from "./types";
 
@@ -173,4 +177,56 @@ export async function uploadProjectCsv(file: File) {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return data;
+}
+
+// Session API
+export async function fetchSessions(params?: {
+  user_id?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<Session[]> {
+  const { data } = await client.get<Session[]>("/sessions", { params });
+  return data;
+}
+
+export async function triggerAggregation(params: {
+  user_id: string;
+  start?: string;
+  end?: string;
+}): Promise<{ sessions_created: number; start: string; end: string }> {
+  const { data } = await client.post("/sessions/aggregate", null, { params });
+  return data;
+}
+
+export async function assignSession(sessionId: number, payload: SessionAssignmentPayload) {
+  const { data } = await client.post(`/sessions/${sessionId}/assign`, payload);
+  return data as Session;
+}
+
+// Assignment Rules API
+export async function fetchRules(params?: {
+  user_id?: string;
+  enabled?: boolean;
+}): Promise<AssignmentRule[]> {
+  const { data } = await client.get<AssignmentRule[]>("/rules", { params });
+  return data;
+}
+
+export async function createRule(payload: AssignmentRulePayload): Promise<AssignmentRule> {
+  const { data } = await client.post("/rules", payload);
+  return data;
+}
+
+export async function updateRule(
+  ruleId: number,
+  payload: Partial<AssignmentRulePayload>
+): Promise<AssignmentRule> {
+  const { data } = await client.put(`/rules/${ruleId}`, payload);
+  return data;
+}
+
+export async function deleteRule(ruleId: number): Promise<void> {
+  await client.delete(`/rules/${ruleId}`);
 }

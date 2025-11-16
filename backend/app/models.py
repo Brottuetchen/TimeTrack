@@ -113,3 +113,71 @@ class CallLog(Base):
     raw_payload = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Session(Base):
+    """
+    Aggregierte Event-Sessions für bessere Übersichtlichkeit.
+    Erstellt durch lokale Aggregations-Engine (kein Cloud-Service!).
+    """
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), nullable=False, index=True)
+
+    # Session-Identifikation
+    process_name = Column(String(128), nullable=False, index=True)
+    window_title_base = Column(String(256), nullable=True)
+
+    # Zeitspanne
+    start_time = Column(DateTime, nullable=False, index=True)
+    end_time = Column(DateTime, nullable=False)
+    total_duration_seconds = Column(Integer, nullable=False)
+    active_duration_seconds = Column(Integer, nullable=False)
+
+    # Aggregations-Metadaten
+    event_count = Column(Integer, default=0)
+    break_count = Column(Integer, default=0)
+    event_ids = Column(JSON, nullable=False)
+
+    # Assignment (wie bei Events)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=True)
+    is_private = Column(Boolean, default=False)
+
+    # Meta
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    assignment = relationship("Assignment", foreign_keys=[assignment_id])
+
+
+class AssignmentRule(Base):
+    """
+    User-definierte Regeln für automatische Event/Session-Zuweisung.
+    Matching-Engine läuft komplett lokal (regex, string-matching).
+    """
+    __tablename__ = "assignment_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    name = Column(String(128), nullable=False)
+
+    # Bedingungen (ALLE müssen matchen)
+    process_pattern = Column(String(128), nullable=True)
+    title_contains = Column(String(256), nullable=True)
+    title_regex = Column(String(512), nullable=True)
+
+    # Aktionen
+    auto_project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    auto_milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True)
+    auto_activity = Column(String(64), nullable=True)
+    auto_comment_template = Column(String(256), nullable=True)
+
+    # Priorität & Status
+    priority = Column(Integer, default=0)
+    enabled = Column(Boolean, default=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project", foreign_keys=[auto_project_id])
+    milestone = relationship("Milestone", foreign_keys=[auto_milestone_id])
